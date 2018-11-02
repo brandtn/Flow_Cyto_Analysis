@@ -1,0 +1,597 @@
+---
+title: "Gresham Lab Flow Core Guide"
+author: '`r Sys.info()[7]`'
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+    number_sections: yes
+    toc: yes
+---
+
+
+**Experiment overview**
+
+THIS VERSION HAS BEEN EDITED TO REMOVE ALL ANALYSIS OF UREA LIMITED POPULATIONS (since the barcoded library can't grow in urea)
+
+This markdown is modified for the experiment EE_GA_glnurmix_barcode17, which is involves the experimental evolution of haploid S. cerevisiae using miniature chemostats. 11 populations have glutamine media (0 copy control DGY1, 1 copy control DGY500, 2 copy control DGY1315, 8 experimental L139 in DGY1706), 11 populations have urea media (0 copy control DGY1, 1 copy control DGY500, 2 copy control DGY1315, 8 experimental L139 in DGY1706), and 10 populations have media with a mix of glutamine and urea (0 copy control DGY1, 1 copy control DGY500, 2 copy control DGY1315, 7 experimental L139 in DGY1706).
+
+This particular markdown is for sample 33, collected 17 Oct 2017, about 265 generations.
+###############################
+
+> This code is designed for use with the Accuri flow cytometer, which is equiped with the following lasers and filters
+
+* Blue laser (488 nm)
+  + FL1 filter = 514/20nm   GFP
+  + FL3 filter = 575/25nm   YFP
+
+* Yellow/green laser (552 nm)
+  + FL2 filter = 610/20nm   mCherry, dtomato
+  + FL4 filter = 586/15nm   DsRed
+  
+  
+
+**Requirements**  
+In order to run this code you need:  
+  + to predefine your gates using the **gating.R** script  
+  + the **gates.Rdata** workspace, which contains the gates used in this script  
+  + the path of the directory(ies), given the variable names **dir1**, **dir2**... that contain .fcs files named A01.fcs, A02.fcs, A03.fcs...  
+  + a tab delimited sample sheet in each directory with the following rows: <Well>	<Strain>	<Genotype>	<Ploidy>	<Media>	<Experiment>  
+  + the variable names are changed in chunk 2 named "Variable Names"    
+
+
+
+
+**Output**  
+This script generates a summary of results followed by quality control plots.  
+
+
+
+#Step 1: Load relevant libraries 
+```{r Libraries, eval=TRUE}
+# This is a function that just makes sure you have a package, or installs it for you without prompting
+
+requireInstall <- function(packageName,isBioconductor=F) {
+  if ( !try(require(packageName,character.only=T)) ) {
+    print(paste0("You don't have ",packageName," accessible, ",
+      "I'm gonna install it"))
+    if (isBioconductor) {
+      source("http://bioconductor.org/biocLite.R")                        
+      biocLite(packageName)                                                 
+    } else {
+      install.packages("packageName", repos = "http://cran.us.r-project.org")
+    }
+  }
+  return(1)
+}
+
+#Load libraries
+requireInstall("flowCore",isBioconductor=T)
+requireInstall("flowViz",isBioconductor=T)
+requireInstall("flowStats")
+requireInstall("Hmisc")
+requireInstall("reshape2")
+requireInstall("ggplot2")
+requireInstall("flowWorkspace")
+requireInstall("ggcyto", isBioconductor=T)
+requireInstall("gridExtra")
+requireInstall("stringr")
+
+
+```
+
+#Step 2: Read in .fcs files, an Rdata file containing the gates sample sheet(s) that contains four columns with 
+* column1 = Well
+* column2 = Strain
+* column3 = Staining
+* column4 = Media
+* column5 = Userdefined
+
+```{r Variable definitions}
+#Read in all data for analysis. Data should be in individual directories that contain .fcs files and a corresponding sample sheet with a generic format. FCS file names should be unaltered e.g AO1.fcs, A02.fcs, ...H12.fcs 
+#An abitrary number of directories can be used named dir1, dir2, dir3...with a corresponding flowData.1, flowData.2, flowData.3...and sample.sheet.1, sample.sheet.2, sample.sheet.3...
+
+#load the Rdata file containing the gates
+load("gates_sample4.Rdata") 
+
+#Read in all the fcs files in the directory, with alter.names changing "-" to "."  
+flowData <- read.flowSet(path = ".", pattern=".fcs", alter.names=TRUE)
+
+#Read in the sample sheet that should be in each directory that contains the .fcs files.  
+sample.sheet <- read.delim(paste("SampleSheet.txt", sep="/"))
+
+#Change names of samples to those specified in the sample sheets
+sampleNames(flowData) <- paste(sample.sheet[,1], sample.sheet[,2], sample.sheet[,3], sample.sheet[,4], sample.sheet[,5], sample.sheet[,6], sep=" ")
+```
+
+
+```{r flowSet summaries}
+#Check how many cells were counted in each fcs file
+fsApply(flowData, each_col, length)[1:32]
+
+total <- fsApply(flowData, each_col, length)[1:32]  #total counts per sample
+
+#Print the medians of data values for each measurement
+fsApply(flowData, each_col, median)
+
+#combine all flowSets into a single flowset
+samples.num <- length(flowData)
+
+```
+
+#Step 3: apply filters to data and generate plots showing the effect on filtering
+```{r Application of Gates}
+##Subset the data by applying sequential gates##
+
+#apply doublet gate to ALL SAMPLES
+flowData.singlets <- Subset(flowData, pg.singlets) 
+fsApply(flowData.singlets, each_col, length)[1:samples.num]
+singlets <- fsApply(flowData.singlets, each_col, length)[1:samples.num]
+barplot(singlets/total, ylim=c(0,1), ylab = "Proportion singlet cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+##Subset data by media type
+flowGln <- flowSet(flowData.singlets[[1]], flowData.singlets[[2]], flowData.singlets[[3]], flowData.singlets[[9]], flowData.singlets[[10]], flowData.singlets[[11]], flowData.singlets[[17]], flowData.singlets[[18]], flowData.singlets[[19]], flowData.singlets[[25]], flowData.singlets[[26]])
+total.gln <- fsApply(flowGln, each_col, length)[1:11]
+samples.num.gln <- length(flowGln)
+sample.sheet.gln <- read.delim(paste("SampleSheetgln.txt", sep="/"))
+sampleNames(flowGln) <- paste(sample.sheet.gln[,1], sample.sheet.gln[,2], sample.sheet.gln[,3], sample.sheet.gln[,4], sample.sheet.gln[,5],sample.sheet.gln[,6], sep=" ")
+
+
+flowMix <- flowSet(flowData.singlets[[7]], flowData.singlets[[8]], flowData.singlets[[15]], flowData.singlets[[16]], flowData.singlets[[22]], flowData.singlets[[23]], flowData.singlets[[24]], flowData.singlets[[30]], flowData.singlets[[31]], flowData.singlets[[32]])
+total.mix <- fsApply(flowMix, each_col, length)[1:10]
+samples.num.mix <- length(flowMix)
+sample.sheet.mix <- read.delim(paste("SampleSheetmix.txt", sep="/"))
+sampleNames(flowMix) <- paste(sample.sheet.mix[,1], sample.sheet.mix[,2], sample.sheet.mix[,3], sample.sheet.mix[,4], sample.sheet.mix[,5],sample.sheet.mix[,6], sep=" ")
+
+####GLUTAMINE GATES####
+#apply debris gates
+filteredGlnData <- Subset(flowGln, pg.nondebris.gln) 
+fsApply(filteredGlnData, each_col, length)[1:samples.num.gln]
+non.debris.gln <- fsApply(filteredGlnData, each_col, length)[1:samples.num.gln]
+barplot(non.debris.gln/total.gln, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+#this gate defines nongfp cells
+gfp.neg.gln <- Subset(filteredGlnData, gln.zero) 
+fsApply(gfp.neg.gln, each_col, length)[1:samples.num.gln]
+non.gfp.gln <- fsApply(gfp.neg.gln, each_col, length)[1:samples.num.gln]
+barplot(non.gfp.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+#this gate defines one copy gfp cells
+gfp.one.gln <- Subset(filteredGlnData, gln.one) 
+fsApply(gfp.one.gln, each_col, length)[1:samples.num.gln]
+gfp.one.cells.gln <- fsApply(gfp.one.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.one.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+#this gate defines two copy gfp cells
+gfp.two.gln <- Subset(filteredGlnData, gln.two) 
+fsApply(gfp.two.gln, each_col, length)[1:samples.num.gln]
+gfp.two.cells.gln <- fsApply(gfp.two.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.two.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr.gln <- Subset(filteredGlnData, gln.three) 
+fsApply(gfp.thr.gln, each_col, length)[1:samples.num.gln]
+gfp.thr.cells.gln <- fsApply(gfp.thr.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.thr.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+####GLUTAMINE UREA MIX GATES####
+#apply debris gates
+filteredMixData <- Subset(flowMix, pg.nondebris.mix) 
+fsApply(filteredMixData, each_col, length)[1:samples.num.mix]
+non.debris.mix <- fsApply(filteredMixData, each_col, length)[1:samples.num.mix]
+barplot(non.debris.mix/total.mix, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+#this gate defines nongfp cells
+gfp.neg.mix <- Subset(filteredMixData, mix.zero) 
+fsApply(gfp.neg.mix, each_col, length)[1:samples.num.mix]
+non.gfp.mix <- fsApply(gfp.neg.mix, each_col, length)[1:samples.num.mix]
+barplot(non.gfp.mix/non.debris.mix, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+#this gate defines one copy gfp cells
+gfp.one.mix <- Subset(filteredMixData, mix.one) 
+fsApply(gfp.one.mix, each_col, length)[1:samples.num.mix]
+gfp.one.cells.mix <- fsApply(gfp.one.mix, each_col, length)[1:samples.num.mix]
+barplot(gfp.one.cells.mix/non.debris.mix, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+#this gate defines two copy gfp cells
+gfp.two.mix <- Subset(filteredMixData, mix.two) 
+fsApply(gfp.two.mix, each_col, length)[1:samples.num.mix]
+gfp.two.cells.mix <- fsApply(gfp.two.mix, each_col, length)[1:samples.num.mix]
+barplot(gfp.two.cells.mix/non.debris.mix, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr.mix <- Subset(filteredMixData, mix.three) 
+fsApply(gfp.thr.mix, each_col, length)[1:samples.num.mix]
+gfp.thr.cells.mix <- fsApply(gfp.thr.mix, each_col, length)[1:samples.num.mix]
+barplot(gfp.thr.cells.mix/non.debris.mix, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+```
+
+#Step 4: Data analysis
+
+##diagnostic values can be defined for plotting purposes
+```{r Definition of diagnostic values}
+#define critical values that can superimposed on plots for easy visual comparison
+
+gfp.bg <- 3.9  #a background value for GFP
+gfp.wt <- 5.9 #a value for wildtype GFP expression
+haploid.fsc <- 6e5 #an empirical value for forward scatter for haploids
+diploid.fsc <- 7e5 #an empirical value for forward scatter for diploids
+gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward scatter
+
+```
+
+##Extract data from fcs files to generate statistics and boxplots
+```{r Data extraction and plotting}
+####GLUTAMINE####
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats.gln <- matrix(data = NA, nrow = length(filteredGlnData), ncol = 9, dimnames = list(sampleNames(filteredGlnData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size.gln <- min(fsApply(filteredGlnData, each_col, length))  
+
+print(sample.size.gln)
+
+comparison.FSC.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+comparison.FL1.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filteredGlnData)){
+ 
+  temp <- exprs(filteredGlnData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats.gln[i,1] <- median(temp[,1]) 
+  summary.stats.gln[i,2] <-mean(temp[,1])  
+  summary.stats.gln[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats.gln[i,4] <- median(temp[,3])
+  summary.stats.gln[i,5] <-mean(temp[,3])  
+  summary.stats.gln[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats.gln[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats.gln[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats.gln[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(str_sub(sampleNames(flowGln[i]), 1, 11), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(str_sub(sampleNames(flowGln[i]), 1,11), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,1] #FSC
+  comparison.FL1.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,3] #FL1 (GFP)
+  comparison.FL1NormFsc.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,3]/temp[1:sample.size.gln,1] #GFP/FSC
+}
+
+
+par(mfrow=c(1,1)) #change number of plots per row back to standard
+
+####GLUTAMINE UREA MIX####
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats.mix <- matrix(data = NA, nrow = length(filteredMixData), ncol = 9, dimnames = list(sampleNames(filteredMixData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size.mix <- min(fsApply(filteredMixData, each_col, length))  
+
+print(sample.size.mix)
+
+comparison.FSC.mix <- matrix(data = NA, nrow = sample.size.mix, ncol = length(filteredMixData), byrow = FALSE,dimnames = NULL)
+comparison.FL1.mix <- matrix(data = NA, nrow = sample.size.mix, ncol = length(filteredMixData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc.mix <- matrix(data = NA, nrow = sample.size.mix, ncol = length(filteredMixData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filteredMixData)){
+ 
+  temp <- exprs(filteredMixData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats.mix[i,1] <- median(temp[,1]) 
+  summary.stats.mix[i,2] <-mean(temp[,1])  
+  summary.stats.mix[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats.mix[i,4] <- median(temp[,3])
+  summary.stats.mix[i,5] <-mean(temp[,3])  
+  summary.stats.mix[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats.mix[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats.mix[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats.mix[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(str_sub(sampleNames(flowMix[i]), 1,11), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(str_sub(sampleNames(flowMix[i]), 1,11), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC.mix[1:sample.size.mix,i] <- temp[1:sample.size.mix,1] #FSC
+  comparison.FL1.mix[1:sample.size.mix,i] <- temp[1:sample.size.mix,3] #FL1 (GFP)
+  comparison.FL1NormFsc.mix[1:sample.size.mix,i] <- temp[1:sample.size.mix,3]/temp[1:sample.size.mix,1] #GFP/FSC
+}
+
+```
+
+
+##Overview of data distributions
+```{r Overall data distributions}
+par(mar=c(8.1,4.1,4.1,2.1)) #create more space at lower margin
+
+####GLUTAMINE####
+boxplot(comparison.FSC.gln, names=str_sub(sampleNames(flowGln),1,11), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1.gln, names=str_sub(sampleNames(flowGln),1,11), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc.gln, names=str_sub(sampleNames(flowGln),1,11), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+####GLUTAMINE AND UREA MIX####
+boxplot(comparison.FSC.mix, names=str_sub(sampleNames(flowMix), 1, 11), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1.mix, names=str_sub(sampleNames(flowMix), 1, 11), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc.mix, names=str_sub(sampleNames(flowMix), 1, 11), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+par(mar=c(5.1,4.1,4.1,2.1)) #reset margins to default
+
+#generate summary tables containing all the recorded statistics
+print(summary.stats.gln)
+summary.stats.gln <- as.data.frame(summary.stats.gln)
+print(summary.stats.mix)
+summary.stats.mix <- as.data.frame(summary.stats.mix)
+
+```
+
+
+##Quantitation of relative FL1 signal
+```{r Quantitation of relative FL1 signal}
+
+###GLUTAMINE###
+baseline.FL1.gln <- summary.stats.gln$FL1_median[4] #MUST REPLACE WITH YOUR 1 COPY CONTROL!!
+barplot(summary.stats.gln$FL1_median/baseline.FL1.gln, ylim = c(0,2), ylab="Relative FL1 median expression", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1, 11))
+
+###GLUTAMINE UREA MIX###
+baseline.FL1.mix <- summary.stats.mix$FL1_median[8] #MUST REPLACE WITH YOUR 1 COPY CONTROL!!
+barplot(summary.stats.mix$FL1_median/baseline.FL1.mix, ylim = c(0,2), ylab="Relative FL1 median expression", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+```
+
+##Quantitation of forward scatter
+```{r Quantitation of forward scatter}
+#use 0 copy control
+###GLUTAMINE###
+baseline.FSC.gln <- summary.stats.gln$FSC_median[1]
+barplot(summary.stats.gln$FSC_median/baseline.FSC.gln, ylab="Relative median FSC", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowGln),1,11))
+
+###GLUTAMINE UREA MIX###
+baseline.FSC.mix <- summary.stats.mix$FSC_median[5]
+barplot(summary.stats.mix$FSC_median/baseline.FSC.mix, ylab="Relative median FSC", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowMix),1,11))
+
+```
+
+##Population composition
+```{r}
+###GLUTAMINE###
+pop.composition.gln <- rbind(non.gfp.gln/non.debris.gln,gfp.one.cells.gln/non.debris.gln,gfp.two.cells.gln/non.debris.gln, gfp.thr.cells.gln/non.debris.gln)
+barplot(pop.composition.gln, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowGln),1,11))
+
+###GLUTAMINE UREA MIX###
+pop.composition.mix <- rbind(non.gfp.mix/non.debris.mix,gfp.one.cells.mix/non.debris.mix,gfp.two.cells.mix/non.debris.mix, gfp.thr.cells.mix/non.debris.mix)
+barplot(pop.composition.mix, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowMix),1,11))
+
+```
+
+#Step 5: Quality control
+
+##Gates
+```{r Gates}
+#Singlets gate
+xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
+
+###Glutamine###
+#Debris gate
+xyplot(SSC.A ~ FSC.A, data=flowGln, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris.gln, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - nondebris gate")
+
+#Non-fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.zero, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - non GFP gate")
+
+#ONe copy Fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.one, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - One copy GFP gate")
+
+#Two copy fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.two, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Two copy GFP gate")
+
+#Three copy plus fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.three, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Three+ copy GFP gate")
+
+###Glutamine Urea Mix###
+#Debris gate
+xyplot(SSC.A ~ FSC.A, data=flowMix, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris.mix, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine urea mix - nondebris gate")
+
+#Non-fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredMixData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=mix.zero, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine urea mix - non GFP gate")
+
+#ONe copy Fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredMixData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=mix.one, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine urea mix - One copy GFP gate")
+
+#Two copy fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredMixData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=mix.two, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine urea mix - Two copy GFP gate")
+
+#Three copy plus fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredMixData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=mix.three, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine urea mix - Three+ copy GFP gate")
+```
+
+
+##Data transformation for visualization
+```{r}
+#In order to look at QC plots the data is transformed using the logicle transform, which is a log transform for high values that transitions to a linear transformation near zero values 
+
+#This is simply for visualization purposes
+
+lgcl <- logicleTransform(w = 0.5, t= 10000, m=4.5) #the parameters w,t, and m define the transformation parameters
+
+#Tranformation applied to every channel except width and time
+dataLGCLTransform <- transform(filteredGlnData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+
+dataLGCLTransform <- transform(filteredMixData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+
+
+```
+
+##Effect of time
+```{r}
+#The effect of time on signal (of which there shouldn't be any)
+i <- 1
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGlnData)[i])
+i <- 2
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGlnData)[i])
+i <- 3
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGlnData)[i])
+```
+
+##Plots of FL1 versus FSC
+```{r}
+i <- 1
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGlnData)[i])
+i <- 2
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGlnData)[i])
+i <- 3
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGlnData)[i])
+```
+
+##Plots of FSC versus SSC
+```{r}
+i <- 1
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGlnData)[i])
+i <- 2
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGlnData)[i])
+i <- 3
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGlnData)[i])
+```
+
+##Extract data for further processing
+```{r Extract data for further processing}
+
+summary.stats.gln <- as.data.frame(summary.stats.gln)
+PopProportion_zeroGFPgln <- non.gfp.gln/non.debris.gln
+PopProportion_oneGFPgln <- gfp.one.cells.gln/non.debris.gln
+PopProportion_twoGFPgln <- gfp.two.cells.gln/non.debris.gln
+PopProportion_threeGFPgln <- gfp.thr.cells.gln/non.debris.gln
+alldatagln <- cbind(summary.stats.gln, PopProportion_zeroGFPgln, PopProportion_oneGFPgln, PopProportion_twoGFPgln, PopProportion_threeGFPgln, non.debris.gln)
+colnames(alldatagln) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+
+summary.stats.mix <- as.data.frame(summary.stats.mix)
+PopProportion_zeroGFPmix <- non.gfp.mix/non.debris.mix
+PopProportion_oneGFPmix<- gfp.one.cells.mix/non.debris.mix
+PopProportion_twoGFPmix <- gfp.two.cells.mix/non.debris.mix
+PopProportion_threeGFPmix <- gfp.thr.cells.mix/non.debris.mix
+alldatamix <- cbind(summary.stats.mix, PopProportion_zeroGFPmix, PopProportion_oneGFPmix, PopProportion_twoGFPmix, PopProportion_threeGFPmix, non.debris.mix)
+colnames(alldatamix) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+
+ALLDATA <- rbind(alldatagln, alldatamix)
+
+#Save the current dataframe
+write.table(ALLDATA, file="DataOut_101717.csv", row.names=TRUE, quote=F, sep="\t")
+
+```
+
+
+
+

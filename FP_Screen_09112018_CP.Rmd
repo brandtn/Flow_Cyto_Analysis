@@ -1,0 +1,460 @@
+---
+title: "Flow_Cytometry_GAP1::GFP_Screen_Tidy"
+author: "Nathan Brandt"
+date: "7/6/2018"
+output: html_document
+---
+
+#1) Two samples in four media types analyzed on the Accuri in triplicate .
+#    Strains-
+#     GAP1::GFP KO Collection Pool
+#     Strains have GFP fused with GAP1 and tdTomato expressed under the ACT1 promoter in the HO locus
+#    Media Types-
+#     SC
+#     Proline Limited Media
+#   Controls-
+#      FY4 in Proline Limited Media
+#      FY4 in SC Media
+#      GFP::GAP1 HISKO in Proline Limited Media
+#      GFP::GAP1 HISKO in SC Media
+
+###This code is designed for use with the Accuri flow cytometer, which is equiped with the following lasers and filters
+* Blue laser (488 nm)
+  + FL1 filter = 514/20nm   GFP
+  + FL3 filter = 575/25nm   YFP
+
+* Yellow/green laser (552 nm)
+  + FL2 filter = 610/20nm   mCherry, dtomato
+  + FL4 filter = 586/15nm   DsRed
+
+******
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Step 1: Load relevant libraries 
+
+```{r}
+# This is a function that just makes sure you have a package, or installs it for you without prompting
+
+requireInstall <- function(packageName,isBioconductor=F) {
+  if ( !try(require(packageName,character.only=T)) ) {
+    print(paste0("You don't have ",packageName," accessible, ",
+      "I'm gonna install it"))
+    if (isBioconductor) {
+      source("http://bioconductor.org/biocLite.R")                        
+      biocLite(packageName)                                                 
+    } else {
+      install.packages("packageName", repos = "http://cran.us.r-project.org")
+    }
+  }
+  return(1)
+}
+
+#Load libraries
+requireInstall("tidyverse")
+requireInstall("flowCore",isBioconductor=T)
+requireInstall("flowViz",isBioconductor=T)
+requireInstall("ggcyto",isBioconductor=T)
+requireInstall("devtools",isBioconductor=T)
+requireInstall("ggpubr",isBioconductor=T)
+devtools::install_github("guiastrennec/ggplus")
+devtools::install_github("kassambara/ggpubr")
+library("ggplus")
+library("ggpubr")
+
+```
+###Step 2: Read in all .fcs files  and a sample sheet for each set that contains columns with. Load Gates
+* column1 = Well
+* column2 = Strain
+* column3 = Genotype
+* column4 = Ploidy
+* column5 = Media
+
+```{r}
+#Set working directory to the folder in which you have stored your .fcs files
+#Read in all the fcs files in the directory.
+
+path.data <-"~/Google Drive/Gresham Lab_Nathan/FlouresenceProtienAccuriRun/"
+
+list.folders <- c("FP_Run1","FP_Run2","Christiaen_Lab_FP")
+
+flowData <- read.flowSet(path = paste(path.data,list.folders[3],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+
+sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[3],".csv", sep=""))
+
+#Adds a sample sheet data to the pData of the flowset
+pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
+pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
+pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
+pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+pData(flowData)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+pData(flowData)$Run <- list.folders[3]
+
+
+#for(i in 2:length(list.folders)) {
+#  flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+
+#  sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
+
+  #Adds a sample sheet data to the pData of the flowset
+#  pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
+#  pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
+#  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
+#  pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+#  pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+#  pData(flowData.temp)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+#  pData(flowData.temp)$Run <- list.folders[i]
+
+
+ # flowData <- rbind2(flowData, flowData.temp)
+#}
+
+
+#load the Rdata file containing the gates
+#load("gates.Rdata") 
+```
+
+
+```{r flowSet summaries}
+#Check how many cells were counted in each fcs file
+fsApply(flowData, each_col, length)[1:length(flowData)]
+total <- fsApply(flowData, each_col, length)[1:length(flowData)]
+
+#Print the medians of data values for each measurement
+fsApply(flowData, each_col, median)
+
+samples.num <- length(flowData)
+
+```
+
+#Step 3: apply filters to data and generate plots showing the effect on filtering
+```{r Application of Gates, eval = FALSE }
+##Subset the data by applying sequential gates##
+
+#apply doublet gate
+flowData.singlets <- Subset(flowData, pg.singlets) 
+fsApply(flowData.singlets, each_col, length)[1:samples.num]
+singlets <- fsApply(flowData.singlets, each_col, length)[1:samples.num]
+barplot(singlets/total, ylim=c(0,1), ylab = "Proportion singlet cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+#apply debris gate
+filteredData <- Subset(flowData.singlets, pg.nondebris) 
+fsApply(filteredData, each_col, length)[1:samples.num]
+non.debris <- fsApply(filteredData, each_col, length)[1:samples.num]
+barplot(non.debris/total, ylim=c(0,1), ylab = "Proportion singlet and nondebris cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+#########
+#filteredData is the variable name for the data filtered of doublets and debris that are used for all subsequent analyses
+##########
+
+#this gate defines nongfp cells
+gfp.neg <- Subset(filteredData, pg.nongfp) 
+fsApply(gfp.neg, each_col, length)[1:samples.num]
+non.gfp <- fsApply(gfp.neg, each_col, length)[1:samples.num]
+barplot(non.gfp/non.debris, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+#this gate defines gfp cells
+gfp.pos <- Subset(filteredData, pg.gfp) 
+fsApply(gfp.pos, each_col, length)[1:samples.num]
+gfp.cells <- fsApply(gfp.pos, each_col, length)[1:samples.num]
+barplot(gfp.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+#this gate defines high GFP cells
+gfp.hi <- Subset(filteredData, pg.hi.gfp) 
+fsApply(gfp.hi, each_col, length)[1:samples.num]
+hi.gfp.cells <- fsApply(gfp.hi, each_col, length)[1:samples.num]
+barplot(hi.gfp.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with high GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+```
+
+#Step 4: Data analysis
+
+#Transfer data into a dataframe and produce summary stats
+```{r}
+#Temp
+filterData <-flowData
+
+
+#Summary Statistics of Normalized Filtered Data
+#Move filtered data into a dataframe
+filter.data <- data.frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, FL2.A=NA, FL3.A=NA, FL4.A=NA, SAMPLE=NA, WELL=NA,STRAIN=NA,EXP=NA,RUN=NA)
+#stats.data <- data.frame(WELL=NA,STRAIN=NA,COUNT=NA,MEDIAN=NA,MEAN=NA,SD=NA,VAR=NA)
+
+for(i in 1:length(filterData)){
+  fsc.a <- exprs(filterData[[i,1]])
+  ssc.a <- exprs(filterData[[i,2]])
+  fl1.a <- exprs(filterData[[i,3]])
+  fl2.a <- exprs(filterData[[i,4]])
+  fl3.a <- exprs(filterData[[i,5]])
+  fl4.a <- exprs(filterData[[i,6]])
+  sample <- paste(gsub(" ","_", unlist(strsplit(rownames(pData(filterData)),'.fcs'))[i]),"_",gsub("_","", pData(filterData)$Strain[i]), sep="")
+  well <- pData(filterData)$Well[i]
+  strain <- gsub(" ","_", pData(filterData)$Strain[i])
+  exp <- gsub(" ","_", pData(filterData)$Experiment[i])
+  run <- pData(filterData)$Run[i]
+
+  filter.data<-rbind(filter.data,cbind(FSC.A=fsc.a,SSC.A=ssc.a,FL1.A=fl1.a,FL2.A=fl2.a, FL3.A=fl3.a, FL4.A=fl4.a,SAMPLE=sample,WELL=well,STRAIN=strain,EXP=exp,RUN=run))
+  
+  #stats.data<-(rbind(stats.data,cbind(WELL=well,STRAIN=strain,COUNT=length(fsc.a),MEDIAN=median(fl1.a/fsc.a),MEAN=mean(fl1.a/fsc.a),SD=sd(fl1.a/fsc.a),VAR=as.numeric(var(fl1.a/fsc.a)))))
+}  
+  
+ #Cleans up DataFrames
+  filter.data<-filter.data[2:nrow(filter.data),]
+  filter.data$FSC.A<-as.numeric(filter.data$FSC.A)
+  filter.data$SSC.A<-as.numeric(filter.data$SSC.A)
+  filter.data$FL1.A<-as.numeric(filter.data$FL1.A)
+  filter.data$FL2.A<-as.numeric(filter.data$FL2.A)
+  filter.data$FL3.A<-as.numeric(filter.data$FL3.A)
+  filter.data$FL4.A<-as.numeric(filter.data$FL4.A)
+  filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
+  filter.data$WELL<-as.factor(filter.data$WELL)
+  filter.data$STRAIN<-as.factor(filter.data$STRAIN)
+  filter.data$EXP<-as.factor(filter.data$EXP)
+  filter.data$RUN<-as.factor(filter.data$RUN)
+  
+  
+  #stats.data<-stats.data[2:nrow(stats.data),]
+  #stats.data$WELL<-as.factor(stats.data$WELL)
+  #stats.data$STRAIN<-as.factor(stats.data$STRAIN)
+  #stats.data$COUNT<-as.numeric(stats.data$COUNT)
+  #stats.data$MEDIAN<-as.numeric(stats.data$MEDIAN)
+  #stats.data$MEAN<-as.numeric(stats.data$MEAN)    
+  #stats.data$SD<-as.numeric(stats.data$SD)
+  #stats.data$VAR<-as.numeric(stats.data$VAR)
+  
+```
+
+## Plots
+
+```{r Plots, echo=FALSE}
+
+#as.ggplot(flowData)
+#ggcyto(flowData[1:42], aes(x = `FL1.A`)) + geom_density(fill = "blue", alpha= 0.5)
+
+pfsc <-ggplot(filter.data)+
+      geom_density(aes(x = FSC.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+      facet_wrap('SAMPLE')
+  
+pfl1 <-ggplot(filter.data)+
+      geom_density(aes(x = FL1.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+      facet_wrap('SAMPLE')
+
+pfl2 <-ggplot(filter.data)+
+      geom_density(aes(x = FL2.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+    facet_wrap('SAMPLE')
+
+pfl3 <-ggplot(filter.data)+
+      geom_density(aes(x = FL2.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+     facet_wrap('SAMPLE')
+
+pfl4 <-ggplot(filter.data)+
+      geom_density(aes(x = FL4.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+    facet_wrap('SAMPLE')
+  
+
+pdf("DensityPlots.pdf")
+  pfsc
+  pfl1
+  pfl2
+  pfl3
+  pfl4
+dev.off()
+
+
+p <- ggplot(filter.data, aes(x = FSC.A, y = SSC.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvSSC.A") +
+    scale_x_log10()+
+    scale_y_log10()
+ 
+    pdf('FSCvSSC.pdf')
+      facet_multiple(plot=p, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+
+p1 <- ggplot(filter.data, aes(x = FSC.A, y = FL1.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvFL1.A") +
+    scale_x_log10()+
+    scale_y_log10()
+ 
+    pdf('FSCvFL1.pdf')
+      facet_multiple(plot=p1, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+    
+p2 <- ggplot(filter.data, aes(x = FSC.A, y = FL2.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvFL2.A") +
+    scale_x_log10()+
+    scale_y_log10()
+ 
+    pdf('FSCvFL2.pdf')
+      facet_multiple(plot=p2, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+    
+p3 <- ggplot(filter.data, aes(x = FSC.A, y = FL3.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvFL3.A") +
+    scale_x_log10()+
+    scale_y_log10()
+ 
+    pdf('FSCvFL3.pdf')
+      facet_multiple(plot=p3, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+
+p4 <- ggplot(filter.data, aes(x = FSC.A, y = FL4.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvFL4.A") +
+    scale_x_log10()+
+    scale_y_log10()
+ 
+    pdf('FSCvFL4pdf')
+      facet_multiple(plot=p4, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+
+
+#Plots of FSC Data
+ggplot(filter.data, aes(SAMPLE,FSC.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FSCA.pdf", height=8, width=12)
+
+#Plots of SSC Data
+ggplot(filter.data, aes(SAMPLE,SSC.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("SSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("SSCA.pdf", height=8, width=12)
+
+#Plot of FL1 Data
+ggplot(filter.data, aes(SAMPLE,FL1.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL1.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL1A.pdf", height=8, width=12)
+
+#Plot of FL2 Data
+ggplot(filter.data, aes(SAMPLE,FL2.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL2.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL2A.pdf", height=8, width=12)
+
+#Plot of FL3 Data
+ggplot(filter.data, aes(SAMPLE,FL3.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL3.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL3A.pdf", height=8, width=12)
+
+#Plot of FL4 Data
+ggplot(filter.data, aes(SAMPLE,FL4.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL4.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL4A.pdf", height=8, width=12)
+
+
+#Plot of FL1/FSC Data
+ggplot(filter.data, aes(SAMPLE,(FL1.A/FSC.A))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL1.A/FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL1AnormbyFSCA.pdf", height=8, width=12)
+
+#Plot of FL2/FSC Data
+ggplot(filter.data, aes(SAMPLE,(FL2.A/FSC.A))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL2.A/FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL2AnormbyFSCA.pdf", height=8, width=12)
+
+#Plot of FL3/FSC Data
+ggplot(filter.data, aes(SAMPLE,(FL3.A/FSC.A))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL13.A/FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL3AnormbyFSCA.pdf", height=8, width=12)
+
+#Plot of FL4/FSC Data
+ggplot(filter.data, aes(SAMPLE,(FL4.A/FSC.A))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL4.A/FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave("FL4AnormbyFSCA.pdf", height=8, width=12)
+
+```
+
+
