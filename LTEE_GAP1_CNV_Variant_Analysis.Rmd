@@ -82,6 +82,7 @@ sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[1],".csv", 
 
 #Adds a sample sheet data to the pData of the flowset
 
+sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
 pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
 pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
 pData(flowData)$Classification <- gsub(" ","_",sample.sheet$Classification)
@@ -100,6 +101,7 @@ for(i in 2:length(list.folders)) {
   sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
 
   #Adds a sample sheet data to the pData of the flowset
+  sampleNames(flowData.temp) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
   pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
   pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
   pData(flowData.temp)$Classification <- gsub(" ","_",sample.sheet$Classification)
