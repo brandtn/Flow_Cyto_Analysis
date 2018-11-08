@@ -74,43 +74,44 @@ library("ggpubr")
 
 path.data <-"~/Google Drive/MiniStatRun_10_2018/"
 
-run.name <- "LTEE_mCitrine_GAP1_Variants"
-list.timepoints <- 
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.2", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
   
-flowData <- read.flowSet(path = paste(path.data,list.folders[1],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+flowData <- read.flowSet(path = paste(path.data, list.folders[1],"/", sep=""), pattern=".fcs", alter.names = TRUE)
 
 sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[1],".csv", sep=""))
 
 #Adds a sample sheet data to the pData of the flowset
-pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
+
 pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
-pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
 pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+pData(flowData)$Classification <- gsub(" ","_",sample.sheet$Classification)
+pData(flowData)$Media <- gsub(" ","_",sample.sheet$Vessel)
+pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
 pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
 pData(flowData)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+pData(flowData)$Timepoint <- gsub(" ","_",sample.sheet$Timepoint)
 pData(flowData)$Run <- list.folders[1]
 
 
-#for(i in 2:length(list.folders)) {
-#  flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+for(i in 2:length(list.folders)) {
+  flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
 
-#  sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
+  sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
 
   #Adds a sample sheet data to the pData of the flowset
-#  pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
-#  pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
-#  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
-#  pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
-#  pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
-#  pData(flowData.temp)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
-#  pData(flowData.temp)$Run <- list.folders[i]
+  pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
+  pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+  pData(flowData.temp)$Classification <- gsub(" ","_",sample.sheet$Classification)
+  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Vessel)
+  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
+  pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+  pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
+  pData(flowData.temp)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+  pData(flowData.temp)$Timepoint <- gsub(" ","_",sample.sheet$Timepoint)
+  pData(flowData.temp)$Run <- list.folders[i]
 
-
- # flowData <- rbind2(flowData, flowData.temp)
-#}
-
-
-#load the Rdata file containing the gates
-#load("gates.Rdata") 
+  flowData <- rbind2(flowData, flowData.temp)
+}
 ```
 
