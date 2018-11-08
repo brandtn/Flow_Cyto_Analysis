@@ -1,0 +1,116 @@
+---
+title: "LTEE_GAP1_CNV_Variant_Analysis"
+author: '`r Sys.info()[7]`'
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+    number_sections: yes
+    toc: yes
+---
+
+**Experiment overview**
+
+Write a detailed description of your experiment here including the goal of the analysis and your interpretation of the results.   
+If you still see this text it means that you have not described the experiment and whatever follows is meaningless.
+###############################
+
+> This code is designed for use with the Accuri flow cytometer, which is equiped with the following lasers and filters
+
+* Blue laser (488 nm)
+  + FL1 filter = 514/20nm   GFP
+  + FL3 filter = 575/25nm   YFP
+
+* Yellow/green laser (552 nm)
+  + FL2 filter = 610/20nm   mCherry, dtomato
+  + FL4 filter = 586/15nm   DsRed
+  
+**Requirements**  
+
+**Output**  
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Step 1: Load relevant libraries 
+
+```{r}
+# This is a function that just makes sure you have a package, or installs it for you without prompting
+
+requireInstall <- function(packageName,isBioconductor=F) {
+  if ( !try(require(packageName,character.only=T)) ) {
+    print(paste0("You don't have ",packageName," accessible, ",
+      "I'm gonna install it"))
+    if (isBioconductor) {
+      source("http://bioconductor.org/biocLite.R")                        
+      biocLite(packageName)                                                 
+    } else {
+      install.packages("packageName", repos = "http://cran.us.r-project.org")
+    }
+  }
+  return(1)
+}
+
+#Load libraries
+requireInstall("tidyverse")
+requireInstall("flowCore",isBioconductor=T)
+requireInstall("flowViz",isBioconductor=T)
+requireInstall("ggcyto",isBioconductor=T)
+requireInstall("devtools",isBioconductor=T)
+requireInstall("ggpubr",isBioconductor=T)
+devtools::install_github("guiastrennec/ggplus")
+devtools::install_github("kassambara/ggpubr")
+library("ggplus")
+library("ggpubr")
+```
+
+```{r}
+#Set working directory to the folder in which you have stored your .fcs files
+#Read in all the fcs files in the directory.
+
+path.data <-"~/Google Drive/MiniStatRun_10_2018/"
+
+run.name <- "LTEE_mCitrine_GAP1_Variants"
+list.timepoints <- 
+  
+flowData <- read.flowSet(path = paste(path.data,list.folders[1],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+
+sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[1],".csv", sep=""))
+
+#Adds a sample sheet data to the pData of the flowset
+pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
+pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
+pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
+pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+pData(flowData)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+pData(flowData)$Run <- list.folders[1]
+
+
+#for(i in 2:length(list.folders)) {
+#  flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+
+#  sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
+
+  #Adds a sample sheet data to the pData of the flowset
+#  pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
+#  pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
+#  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
+#  pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
+#  pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
+#  pData(flowData.temp)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
+#  pData(flowData.temp)$Run <- list.folders[i]
+
+
+ # flowData <- rbind2(flowData, flowData.temp)
+#}
+
+
+#load the Rdata file containing the gates
+#load("gates.Rdata") 
+```
+
