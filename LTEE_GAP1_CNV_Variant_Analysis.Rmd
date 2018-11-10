@@ -86,7 +86,7 @@ sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","
 pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
 pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
 pData(flowData)$Classification <- gsub(" ","_",sample.sheet$Classification)
-pData(flowData)$Media <- gsub(" ","_",sample.sheet$Vessel)
+pData(flowData)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
 pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
 pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
 pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
@@ -105,7 +105,7 @@ for(i in 2:length(list.folders)) {
   pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
   pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
   pData(flowData.temp)$Classification <- gsub(" ","_",sample.sheet$Classification)
-  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Vessel)
+  pData(flowData.temp)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
   pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
   pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
   pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
@@ -116,4 +116,206 @@ for(i in 2:length(list.folders)) {
   flowData <- rbind2(flowData, flowData.temp)
 }
 ```
+
+```{r flowSet summaries}
+#Check how many cells were counted in each fcs file
+total <- fsApply(flowData, each_col, length) #total counts per sample
+print(total)
+#Print the medians of data values for each measurement
+fsApply(flowData, each_col, median)
+
+#combine all flowSets into a single flowset
+samples.num <- length(flowData)
+print(samples.num)
+```
+#Step 3: apply filters to data and generate plots showing the effect on filtering
+
+#Step 4: Data analysis
+
+
+#diagnostic values can be defined for plotting purposes
+```{r Definition of diagnostic values}
+#define critical values that can superimposed on plots for easy visual comparison
+
+gfp.bg <- 3.9  #a background value for GFP
+gfp.wt <- 5.9 #a value for wildtype GFP expression
+haploid.fsc <- 6e5 #an empirical value for forward scatter for haploids
+diploid.fsc <- 7e5 #an empirical value for forward scatter for diploids
+gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward scatter
+
+```
+
+
+#Transfer data into a dataframe and produce summary stats
+```{r}
+#Temp
+filterData <-flowData
+
+
+#Summary Statistics of Normalized Filtered Data
+#Move filtered data into a dataframe
+filter.data <- data.frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, SAMPLE=NA, VESSEL=NA,STRAIN=NA,TIMEPOINT=NA)
+stats.data <- data.frame(VESSEL=NA,STRAIN=NA,COUNT=NA,MEDIAN=NA,MEAN=NA,SD=NA,VAR=NA)
+
+for(i in 1:length(filterData)){
+  fsc.a <- exprs(filterData[[i,1]])
+  ssc.a <- exprs(filterData[[i,2]])
+  fl1.a <- exprs(filterData[[i,3]])
+  #fl2.a <- exprs(filterData[[i,4]])
+  #fl3.a <- exprs(filterData[[i,5]])
+  #fl4.a <- exprs(filterData[[i,6]])
+  sample <- sampleNames(filterData[i])
+  vessel <- pData(filterData)$Vessel[i]
+  strain <- pData(filterData)$Strain[i]
+  timepoint <- pData(filterData)$Timepoint[i]
+  
+
+  filter.data<-rbind(filter.data,cbind(FSC.A=fsc.a,SSC.A=ssc.a,FL1.A=fl1.a,SAMPLE=sample,VESSEL=vessel,STRAIN=strain,TIMEPOINT=timepoint))
+  stats.data<-(rbind(stats.data,cbind(VESSEL=vessel,STRAIN=strain,COUNT=length(fsc.a),MEDIAN=median(fl1.a/fsc.a),MEAN=mean(fl1.a/fsc.a),SD=sd(fl1.a/fsc.a),VAR=as.numeric(var(fl1.a/fsc.a)))))
+} 
+
+#Cleans up DataFrames
+filter.data<-filter.data[2:nrow(filter.data),]
+  
+stats.data<-stats.data[2:nrow(stats.data),]
+```
+
+```{r}
+#Saves Data
+save(path.data, list.folders, total, samples.num, flowData, filterData, filter.data, stats.data, file = paste(path.data, "data_DF.RData", sep=""))
+```
+
+```{r}
+#Loads Data
+load(file = paste(path.data, "data_DF.RData", sep=""))
+```
+
+##Extract data from fcs files to generate statistics and boxplots
+```{r Data extraction and plotting}
+#Temp
+filterData <-flowData
+
+###GLUTAMINE###
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats <- matrix(data = NA, nrow = length(filterData), ncol = 9, dimnames = list(sampleNames(filterData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size <- min(fsApply(filterData, each_col, length))  
+
+print(sample.size)
+
+comparison.FSC <- matrix(data = NA, nrow = sample.size, ncol = length(filterData), byrow = FALSE,dimnames = NULL)
+comparison.FL1 <- matrix(data = NA, nrow = sample.size, ncol = length(filterData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc <- matrix(data = NA, nrow = sample.size, ncol = length(filterData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filterData)){
+ 
+  temp <- exprs(filterData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats[i,1] <- median(temp[,1]) 
+  summary.stats[i,2] <-mean(temp[,1])  
+  summary.stats[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats[i,4] <- median(temp[,3])
+  summary.stats[i,5] <-mean(temp[,3])  
+  summary.stats[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(filterData[i]), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(filterData[i]), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC[1:sample.size,i] <- temp[1:sample.size,1] #FSC
+  comparison.FL1[1:sample.size,i] <- temp[1:sample.size,3] #FL1 (GFP)
+  comparison.FL1NormFsc[1:sample.size,i] <- temp[1:sample.size,3]/temp[1:sample.size,1] #GFP/FSC
+}
+
+```
+
+
+##Overview of data distributions
+```{r Overall data distributions}
+par(mar=c(8.1,4.1,4.1,2.1)) #create more space at lower margin
+
+###GLUTAMINE###
+boxplot(comparison.FSC, names=sampleNames(filterData), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1, names=sampleNames(filterData), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc, names=sampleNames(filterData), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+par(mar=c(5.1,4.1,4.1,2.1)) #reset margins to default
+
+#generate summary tables containing all the recorded statistics
+print(summary.stats)
+summary.stats.gln <- as.data.frame(summary.stats)
+
+```
+
+```{r}
+#Saves Data
+save(path.data, list.folders, total, samples.num, flowData, filterData, summary.stats, sample.size, file = paste(path.data, "data_M.RData", sep=""))
+```
+
+```{r}
+#Loads Data
+load(file = paste(path.data, "data_M.RData", sep=""))
+```
+
 
