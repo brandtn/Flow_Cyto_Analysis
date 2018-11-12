@@ -148,14 +148,15 @@ gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward s
 
 #Transfer data into a dataframe and produce summary stats
 ```{r}
-#Temp
-filterData <-flowData
+filt <- "1"
+
+filterData <- subset(flowData, pData(flowData)$Vessel == filt)
 
 
 #Summary Statistics of Normalized Filtered Data
-#Move filtered data into a dataframe
-filter.data <- data.frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, SAMPLE=NA, VESSEL=NA,STRAIN=NA,TIMEPOINT=NA)
-stats.data <- data.frame(VESSEL=NA,STRAIN=NA,COUNT=NA,MEDIAN=NA,MEAN=NA,SD=NA,VAR=NA)
+#Move filtered data into a tibble
+filter.data <- data_frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, SAMPLE=NA, VESSEL=NA,STRAIN=NA,TIMEPOINT=NA)
+#stats.data <- data_frame(VESSEL=NA,STRAIN=NA,COUNT=NA,MEDIAN=NA,MEAN=NA,SD=NA,VAR=NA)
 
 for(i in 1:length(filterData)){
   fsc.a <- exprs(filterData[[i,1]])
@@ -171,13 +172,28 @@ for(i in 1:length(filterData)){
   
 
   filter.data<-rbind(filter.data,cbind(FSC.A=fsc.a,SSC.A=ssc.a,FL1.A=fl1.a,SAMPLE=sample,VESSEL=vessel,STRAIN=strain,TIMEPOINT=timepoint))
-  stats.data<-(rbind(stats.data,cbind(VESSEL=vessel,STRAIN=strain,COUNT=length(fsc.a),MEDIAN=median(fl1.a/fsc.a),MEAN=mean(fl1.a/fsc.a),SD=sd(fl1.a/fsc.a),VAR=as.numeric(var(fl1.a/fsc.a)))))
+  #stats.data<-(rbind(stats.data,cbind(VESSEL=vessel,STRAIN=strain,COUNT=length(fsc.a),MEDIAN=median(fl1.a/fsc.a),MEAN=mean(fl1.a/fsc.a),SD=sd(fl1.a/fsc.a),VAR=as.numeric(var(fl1.a/fsc.a)))))
 } 
 
 #Cleans up DataFrames
 filter.data<-filter.data[2:nrow(filter.data),]
+filter.data$FSC.A<-as.numeric(filter.data$FSC.A)
+filter.data$SSC.A<-as.numeric(filter.data$SSC.A)
+filter.data$FL1.A<-as.numeric(filter.data$FL1.A)
+filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
+filter.data$VESSEL<-as.factor(filter.data$VESSEL)
+filter.data$STRAIN<-as.factor(filter.data$STRAIN)
+filter.data$TIMEPOINT<-as.factor(filter.data$TIMEPOINT)
+ 
+#stats.data<-stats.data[2:nrow(stats.data),]
+#stats.data$VESSEL<-as.factor(stats.data$VESSEL)
+#stats.data$STRAIN<-as.factor(stats.data$STRAIN)
+#stats.data$COUNT<-as.numeric(stats.data$COUNT)
+#stats.data$MEDIAN<-as.numeric(stats.data$MEDIAN)
+#stats.data$MEAN<-as.numeric(stats.data$MEAN)    
+#stats.data$SD<-as.numeric(stats.data$SD)
+#stats.data$VAR<-as.numeric(stats.data$VAR)
   
-stats.data<-stats.data[2:nrow(stats.data),]
 ```
 
 ```{r}
@@ -189,6 +205,123 @@ save(path.data, list.folders, total, samples.num, flowData, filterData, filter.d
 #Loads Data
 load(file = paste(path.data, "data_DF.RData", sep=""))
 ```
+
+## Plots
+
+```{r Plots, echo=FALSE}
+
+#as.ggplot(flowData)
+#ggcyto(flowData[1:42], aes(x = `FL1.A`)) + geom_density(fill = "blue", alpha= 0.5)
+
+pfsc <-ggplot(filter.data )+
+      geom_density(aes(x = FSC.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+      facet_wrap('SAMPLE')
+  
+pfl1 <-ggplot(filter.data)+
+      geom_density(aes(x = FL1.A), colour = "black")+
+      theme(legend.position="none")+
+      labs(y = "Counts") +
+      scale_x_log10()+
+      facet_wrap('SAMPLE')
+
+
+pdf(paste(path.data,"DensityPlots",filt,".pdf", sep=""))
+  pfsc
+  pfl1
+dev.off()
+
+
+p <- ggplot(filter.data, aes(x = FSC.A, y = SSC.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvSSC.A") +
+    scale_x_log10()+
+    scale_y_log10()
+
+    pdf(paste(path.data,"FSCvSSC",filt,".pdf", sep=""))
+      facet_multiple(plot=p, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+
+p1 <- ggplot(filter.data, aes(x = FSC.A, y = FL1.A))+
+    geom_hex(bins=512)+
+    theme(legend.position="none")+
+    labs(title= "FSC.AvFL1.A") +
+    scale_x_log10()+
+    scale_y_log10()
+
+    pdf(paste(path.data,"FSCvFL1",filt,".pdf", sep=""))
+      facet_multiple(plot=p1, facets='SAMPLE', ncol=2, nrow=2)
+    dev.off()
+    
+
+
+#Plots of FSC Data
+ggplot(filter.data, aes(SAMPLE,FSC.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave(paste(path.data,"FSCA",filt,".pdf", sep=""), height=8, width=12)
+
+#Plots of SSC Data
+ggplot(filter.data, aes(SAMPLE,SSC.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("SSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave(paste(path.data,"SSCA",filt,".pdf", sep=""), height=8, width=12)
+
+#Plot of FL1 Data
+ggplot(filter.data, aes(SAMPLE,FL1.A)) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL1.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave(paste(path.data,"FL1A",filt,".pdf", sep=""), height=8, width=12)
+
+
+
+#Plot of FL1/FSC Data
+ggplot(filter.data, aes(SAMPLE,(FL1.A/FSC.A))) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    stat_boxplot(geom ='errorbar') +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title= paste("FL1.A/FSC.A", sep="")) +
+    scale_y_log10()+
+    scale_x_discrete(labels=levels(filter.data$SAMPLE))+
+    xlab("SAMPLE")
+ggsave(paste(path.data,"FL1AnormbyFSCA",filt,".pdf", sep=""), height=8, width=12)
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
 
 ##Extract data from fcs files to generate statistics and boxplots
 ```{r Data extraction and plotting}
