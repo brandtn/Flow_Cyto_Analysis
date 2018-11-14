@@ -183,10 +183,10 @@ filter.data$FSC.A<-as.numeric(filter.data$FSC.A)
 filter.data$SSC.A<-as.numeric(filter.data$SSC.A)
 filter.data$FL1.A<-as.numeric(filter.data$FL1.A)
 filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
- filter.data$VESSEL<-as.factor(filter.data$VESSEL)
+filter.data$VESSEL<-as.numeric(filter.data$VESSEL)
 filter.data$STRAIN<-as.factor(filter.data$STRAIN)
 filter.data$TIMEPOINT<-as.factor(filter.data$TIMEPOINT)
-filter.data$TIMEPOINT <- factor(filter.data$TIMEPOINT, levels(factor(filter.data$TIMEPOINT))[c(11,1,8:10,2:7)]) # fixes timepoint order
+#filter.data$TIMEPOINT <- factor(filter.data$TIMEPOINT, levels(factor(filter.data$TIMEPOINT))[c(11,1,8:10,2:7)]) # fixes timepoint order
  
 #stats.data<-stats.data[2:nrow(stats.data),]
 #stats.data$VESSEL<-as.factor(stats.data$VESSEL)
@@ -212,12 +212,15 @@ load(file = paste(path.data, "data_DF.RData", sep=""))
 ## Plots
 
 ```{r Plots, echo=FALSE}
+tps <- levels(filter.data$TIMEPOINT)
+vess <- levels(filter.data$VESSEL)
 
-filt <- "1"
+for(i in 1:length(vess)){
+filt <- vess[i]
 #as.ggplot(flowData)
 #ggcyto(flowData[1:42], aes(x = `FL1.A`)) + geom_density(fill = "blue", alpha= 0.5)
 
-plot.data <- filter.data %>% filter(VESSEL == filt) %>% arrange(TIMEPOINT)
+plot.data <- filter.data %>% filter(VESSEL == 1)
           
 pfsc <-ggplot(plot.data )+
       geom_density(aes(x = FSC.A), colour = "black")+
@@ -231,7 +234,7 @@ pfl1 <-ggplot(plot.data)+
       theme(legend.position="none")+
       labs(y = "Counts") +
       scale_x_log10()+
-      facet_wrap('TIMPEOINT')
+      facet_wrap('SAMPLE')
 
 
 pdf(paste(path.data,"DensityPlots",filt,".pdf", sep=""))
@@ -245,10 +248,12 @@ p <- ggplot(plot.data, aes(x = FSC.A, y = SSC.A))+
     theme(legend.position="none")+
     labs(title= "FSC.AvSSC.A") +
     scale_x_log10()+
-    scale_y_log10()
+    scale_y_log10()+
+    facet_wrap('SAMPLE')
 
     pdf(paste(path.data,"FSCvSSC",filt,".pdf", sep=""))
-      facet_multiple(plot=p, facets='SAMPLE', ncol=2, nrow=2)
+      p
+      #facet_multiple(plot=p, facets='SAMPLE', ncol=2, nrow=2)
     dev.off()
 
 p1 <- ggplot(plot.data, aes(x = FSC.A, y = FL1.A))+
@@ -259,7 +264,8 @@ p1 <- ggplot(plot.data, aes(x = FSC.A, y = FL1.A))+
     scale_y_log10()
 
     pdf(paste(path.data,"FSCvFL1",filt,".pdf", sep=""))
-      facet_multiple(plot=p1, facets='SAMPLE', ncol=2, nrow=2)
+      p1
+      #facet_multiple(plot=p1, facets='SAMPLE', ncol=2, nrow=2)
     dev.off()
     
 
@@ -314,7 +320,7 @@ ggplot(plot.data, aes(SAMPLE,(FL1.A/FSC.A))) +
     xlab("SAMPLE")
 ggsave(paste(path.data,"FL1AnormbyFSCA",filt,".pdf", sep=""), height=8, width=12)
 
-
+}
 
 
 ```
