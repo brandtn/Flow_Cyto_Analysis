@@ -183,7 +183,7 @@ filter.data$FSC.A<-as.numeric(filter.data$FSC.A)
 filter.data$SSC.A<-as.numeric(filter.data$SSC.A)
 filter.data$FL1.A<-as.numeric(filter.data$FL1.A)
 filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
-filter.data$VESSEL<-as.numeric(filter.data$VESSEL)
+filter.data$VESSEL<-as.factor(filter.data$VESSEL)
 filter.data$STRAIN<-as.factor(filter.data$STRAIN)
 filter.data$TIMEPOINT<-as.factor(filter.data$TIMEPOINT)
 #filter.data$TIMEPOINT <- factor(filter.data$TIMEPOINT, levels(factor(filter.data$TIMEPOINT))[c(11,1,8:10,2:7)]) # fixes timepoint order
@@ -206,6 +206,7 @@ save(path.data, list.folders, flowData, filterData, filter.data, file = paste(pa
 
 ```{r}
 #Loads Data
+path.data <-"~/Google Drive/MiniStatRun_10_2018/"
 load(file = paste(path.data, "data_DF.RData", sep=""))
 ```
 
