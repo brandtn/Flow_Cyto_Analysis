@@ -151,9 +151,10 @@ gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward s
 #Transfer data into a dataframe and produce summary stats
 ```{r}
 
-#filt <- "1"
-#filterData <- subset(flowData, pData(flowData)$Vessel == filt)
-filterData <- subset(flowData, is.na(pData(flowData)$Vessel))
+filt <- "ON"
+#filterData <- subset(flowData, pData(flowData)$Vessel == filt) #Sperates based on Vessel
+#filterData <- subset(flowData, is.na(pData(flowData)$Vessel)) # Seprates for ON might want to alter SampleSheet
+filterData <- subset(flowData, pData(flowData)$Timepoint == filt)
 
 #filterData <- flowData
 
@@ -188,7 +189,9 @@ filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
 filter.data$VESSEL<-as.factor(filter.data$VESSEL)
 filter.data$STRAIN<-as.factor(filter.data$STRAIN)
 filter.data$TIMEPOINT<-as.factor(filter.data$TIMEPOINT)
-filter.data$SAMPLE <- factor(filter.data$SAMPLE, levels(factor(filter.data$SAMPLE))[c(1,10:12,2:9)]) # fixes Sample order for single vessel filter only
+#filter.data$SAMPLE <- factor(filter.data$SAMPLE, levels(factor(filter.data$SAMPLE))[c(1,10:12,2:9)]) # fixes Sample order for single vessel filter only
+filter.data$SAMPLE <- factor(filter.data$SAMPLE, levels(factor(filter.data$SAMPLE))[c(1,16,15,2:14)]) # fixes Sample order for Overnight
+
  
 #stats.data<-stats.data[2:nrow(stats.data),]
 #stats.data$VESSEL<-as.factor(stats.data$VESSEL)
