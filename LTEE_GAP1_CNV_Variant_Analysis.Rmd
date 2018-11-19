@@ -153,7 +153,9 @@ gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward s
 
 #filt <- "1"
 #filterData <- subset(flowData, pData(flowData)$Vessel == filt)
-filterData <- flowData
+filterData <- subset(flowData, is.na(pData(flowData)$Vessel))
+
+#filterData <- flowData
 
 #Summary Statistics of Normalized Filtered Data
 #Move filtered data into a tibble
@@ -186,7 +188,7 @@ filter.data$SAMPLE<-as.factor(filter.data$SAMPLE)
 filter.data$VESSEL<-as.factor(filter.data$VESSEL)
 filter.data$STRAIN<-as.factor(filter.data$STRAIN)
 filter.data$TIMEPOINT<-as.factor(filter.data$TIMEPOINT)
-#filter.data$TIMEPOINT <- factor(filter.data$TIMEPOINT, levels(factor(filter.data$TIMEPOINT))[c(11,1,8:10,2:7)]) # fixes timepoint order
+filter.data$SAMPLE <- factor(filter.data$SAMPLE, levels(factor(filter.data$SAMPLE))[c(1,10:12,2:9)]) # fixes Sample order for single vessel filter only
  
 #stats.data<-stats.data[2:nrow(stats.data),]
 #stats.data$VESSEL<-as.factor(stats.data$VESSEL)
@@ -213,15 +215,15 @@ load(file = paste(path.data, "data_DF.RData", sep=""))
 ## Plots
 
 ```{r Plots, echo=FALSE}
-tps <- levels(filter.data$TIMEPOINT)
-vess <- levels(filter.data$VESSEL)
+#tps <- levels(filter.data$TIMEPOINT)
+#vess <- levels(filter.data$VESSEL)
 
-for(i in 1:length(vess)){
-filt <- vess[i]
+#for(i in 1:length(vess)){
+#filt <- vess[i]
 #as.ggplot(flowData)
 #ggcyto(flowData[1:42], aes(x = `FL1.A`)) + geom_density(fill = "blue", alpha= 0.5)
 
-plot.data <- filter.data %>% filter(VESSEL == 1)
+plot.data <- filter.data #%>% filter(VESSEL == 1)
           
 pfsc <-ggplot(plot.data )+
       geom_density(aes(x = FSC.A), colour = "black")+
@@ -262,7 +264,8 @@ p1 <- ggplot(plot.data, aes(x = FSC.A, y = FL1.A))+
     theme(legend.position="none")+
     labs(title= "FSC.AvFL1.A") +
     scale_x_log10()+
-    scale_y_log10()
+    scale_y_log10()+
+    facet_wrap('SAMPLE')
 
     pdf(paste(path.data,"FSCvFL1",filt,".pdf", sep=""))
       p1
@@ -321,7 +324,7 @@ ggplot(plot.data, aes(SAMPLE,(FL1.A/FSC.A))) +
     xlab("SAMPLE")
 ggsave(paste(path.data,"FL1AnormbyFSCA",filt,".pdf", sep=""), height=8, width=12)
 
-}
+#}
 
 
 ```
