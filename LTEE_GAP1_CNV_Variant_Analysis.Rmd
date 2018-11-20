@@ -181,6 +181,55 @@ barplot(gfp.thr.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with 3 c
 
 
 
+#Step 3: apply filters to data and generate plots showing the effect on filtering
+```{r Application of Gates}
+##Subset the data by applying sequential gates##
+
+#Load Gates
+load(file = "gates_LTEE_GAP1_Var.RData")
+
+#apply doublet gate to ALL SAMPLES
+flowData.singlets <- Subset(flowData, pg.singlets) 
+fsApply(flowData.singlets, each_col, length)[1:samples.num]
+singlets <- fsApply(flowData.singlets, each_col, length)[1:samples.num]
+barplot(singlets/total, ylim=c(0,1), ylab = "Proportion singlet cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+
+####GLUTAMINE GATES####
+#apply debris gates
+filtered.debris <- Subset(flowData, pg.nondebris) 
+fsApply(filtered.debris, each_col, length)[1:samples.num]
+non.debris <- fsApply(filtered.debris, each_col, length)[1:samples.num]
+barplot(non.debris/total, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowData)))
+
+#this gate defines nongfp cells
+gfp.neg <- Subset(flowData, gln.zero) 
+fsApply(gfp.neg, each_col, length)[1:samples.num]
+non.gfp <- fsApply(gfp.neg, each_col, length)[1:samples.num]
+barplot(non.gfp/non.debris, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowData)))
+
+#this gate defines one copy gfp cells
+gfp.one <- Subset(flowData, gln.one) 
+fsApply(gfp.one, each_col, length)[1:samples.num]
+gfp.one.cells <- fsApply(gfp.one, each_col, length)[1:samples.num]
+barplot(gfp.one.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowData)))
+
+#this gate defines two copy gfp cells
+gfp.two <- Subset(flowData, gln.two) 
+fsApply(gfp.two, each_col, length)[1:samples.num]
+gfp.two.cells <- fsApply(gfp.two, each_col, length)[1:samples.num]
+barplot(gfp.two.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowData)))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr <- Subset(flowData, gln.three) 
+fsApply(gfp.thr, each_col, length)[1:samples.num]
+gfp.thr.cells <- fsApply(gfp.thr, each_col, length)[1:samples.num]
+barplot(gfp.thr.cells/non.debris, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=str_sub(sampleNames(flowData)))
+```
+
+
+
+
 #Step 4: Data analysis
 
 
