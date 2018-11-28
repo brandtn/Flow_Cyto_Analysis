@@ -382,26 +382,26 @@ barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "On
 
 #Step 5: Quality control
 
-##Gates
+##Gates # Currently only works for a singal sample at a time
 ```{r Gates}
 #Singlets gate
-xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
+xyplot(FSC.A~FSC.H, data=flowData[1], xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
 
 ###Glutamine###
 #Debris gate
-xyplot(SSC.A ~ FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - nondebris gate")
+xyplot(SSC.A ~ FSC.A, data=flowData[1], displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - nondebris gate")
 
 #Non-fluorescent population gate
-xyplot(FL1.A~FSC.A,data=filterData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.zero, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - non GFP gate")
+xyplot(FL1.A~FSC.A,data=filterData[1], displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.zero, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - non GFP gate")
 
 #ONe copy Fluorescent population gate
-xyplot(FL1.A~FSC.A,data=filterData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.one, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - One copy GFP gate")
+xyplot(FL1.A~FSC.A,data=filterData[2], displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.one, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - One copy GFP gate")
 
 #Two copy fluorescent population gate
-xyplot(FL1.A~FSC.A,data=filterData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.two, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Two copy GFP gate")
+xyplot(FL1.A~FSC.A,data=filterData[3], displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.two, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Two copy GFP gate")
 
 #Three copy plus fluorescent population gate
-xyplot(FL1.A~FSC.A,data=filterData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.three, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Three+ copy GFP gate")
+xyplot(FL1.A~FSC.A,data=filterData[3], displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.three, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Three+ copy GFP gate")
 
 ```
 
@@ -415,7 +415,7 @@ xyplot(FL1.A~FSC.A,data=filterData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,
 lgcl <- logicleTransform(w = 0.5, t= 10000, m=4.5) #the parameters w,t, and m define the transformation parameters
 
 #Tranformation applied to every channel except width and time
-dataLGCLTransform <- transform(filterData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+dataLGCLTransform <- transform(filterData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`)) 
 
 
 
@@ -461,21 +461,12 @@ PopProportion_zeroGFPgln <- non.gfp/non.debris
 PopProportion_oneGFPgln <- gfp.one.cells/non.debris
 PopProportion_twoGFPgln <- gfp.two.cells/non.debris
 PopProportion_threeGFPgln <- gfp.thr.cells/non.debris
-alldatagln <- cbind(summary.stats, PopProportion_zeroGFPgln, PopProportion_oneGFPgln, PopProportion_twoGFPgln, PopProportion_threeGFPgln, non.debris)
-colnames(alldatagln) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+alldata <- cbind(summary.stats, PopProportion_zeroGFPgln, PopProportion_oneGFPgln, PopProportion_twoGFPgln, PopProportion_threeGFPgln, non.debris)
+colnames(alldata) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
 
-summary.stats.mix <- as.data.frame(summary.stats.mix)
-PopProportion_zeroGFPmix <- non.gfp.mix/non.debris.mix
-PopProportion_oneGFPmix<- gfp.one.cells.mix/non.debris.mix
-PopProportion_twoGFPmix <- gfp.two.cells.mix/non.debris.mix
-PopProportion_threeGFPmix <- gfp.thr.cells.mix/non.debris.mix
-alldatamix <- cbind(summary.stats.mix, PopProportion_zeroGFPmix, PopProportion_oneGFPmix, PopProportion_twoGFPmix, PopProportion_threeGFPmix, non.debris.mix)
-colnames(alldatamix) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
-
-ALLDATA <- rbind(alldatagln, alldatamix)
 
 #Save the current dataframe
-write.table(ALLDATA, file="DataOut_112618.csv", row.names=TRUE, quote=F, sep="\t")
+write.table(alldata, file="DataOut_112618.csv", row.names=TRUE, quote=F, sep=",")
 
 ```
 
