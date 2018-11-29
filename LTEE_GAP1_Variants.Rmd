@@ -531,7 +531,11 @@ colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", 
 
 
 #Save the current dataframe
+<<<<<<< HEAD
 write.table(all.data, file="DataOut_11282018.csv", row.names=TRUE, quote=F, sep=",")
+=======
+write.table(all.data, file="DataOut_11282018.csv", row.names=TRUE, quote=F, sep="\t")
+>>>>>>> 509c047aa4517ae643e612856d8426921d867964
 
 ```
 
