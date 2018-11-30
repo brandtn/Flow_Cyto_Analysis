@@ -45,11 +45,11 @@ myplot <- ggplot(alldata, aes(x=Generation,y=(normalizedGFP_median), colour=Samp
   geom_point() +
   geom_line(aes(linetype=Population), size=1.2) +
   scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
-  scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
   scale_x_continuous("Generations") +
   theme_classic() +
-  #scale_color_brewer(palette="Spectral", direction = 1) +
-  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
   #facet_grid(Population ~ .) +
   #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
