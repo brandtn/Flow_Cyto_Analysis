@@ -105,7 +105,7 @@ sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[tp],".csv",
 sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
 pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
 pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
-pData(flowData)$Classification <- gsub(" ","_",sample.sheet$Classification)
+pData(flowData)$Population <- gsub(" ","_",sample.sheet$Population)
 pData(flowData)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
 pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
 pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
@@ -124,7 +124,7 @@ if(all == "YES") {
     sampleNames(flowData.temp) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
     pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
     pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
-    pData(flowData.temp)$Classification <- gsub(" ","_",sample.sheet$Classification)
+    pData(flowData.temp)$Population <- gsub(" ","_",sample.sheet$Population)
     pData(flowData.temp)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
     pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
     pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
@@ -237,8 +237,8 @@ gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward s
 
 #Summary Statistics of Normalized Filtered Data
 #Move filtered data into a dataframe
-filtered.data <- data.frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, FL2.A=NA, FL3.A=NA, FL4.A=NA, SAMPLE=NA, STRAIN=NA, GENOTYPE=NA, CLASSIFICATION=NA, VESSEL=NA, MEDIA=NA, PLOIDY=NA, WELL=NA, EXP=NA, TIMEPOINT=NA, RUN=NA)
-stats.data <- data.frame(SAMPLE=NA,STRAIN=NA,VESSEL=NA,TIMEPOINT=NA,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL1_MEDIAN=NA,FL1_MEAN=NA,FL1_SD=NA,NORMALIZED_GFP_MEDIAN=NA,NORMALIZED_GFP_MEAN=NA,NORMALIZED_GFP_SD=NA)
+filtered.data <- data.frame(FSC.A=NA,SSC.A=NA,FL1.A=NA, FL2.A=NA, FL3.A=NA, FL4.A=NA, SAMPLE=NA, STRAIN=NA, GENOTYPE=NA, POPULATION=NA, VESSEL=NA, MEDIA=NA, PLOIDY=NA, WELL=NA, EXP=NA, TIMEPOINT=NA, RUN=NA)
+stats.data <- data.frame(SAMPLE=NA,STRAIN=NA,POPULATION=NA,VESSEL=NA,TIMEPOINT=NA,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL1_MEDIAN=NA,FL1_MEAN=NA,FL1_SD=NA,NORMALIZED_GFP_MEDIAN=NA,NORMALIZED_GFP_MEAN=NA,NORMALIZED_GFP_SD=NA)
 
 for(i in 1:length(filteredData)){
   fsc.a <- exprs(filteredData[[i,1]])
@@ -250,7 +250,7 @@ for(i in 1:length(filteredData)){
   sample <- sampleNames(filteredData)[i]
   strain <- pData(filteredData)$Strain[i]
   genotype <- pData(filteredData)$Genotype[i]
-  classification <- pData(filteredData)$Classification[i]
+  population <- pData(filteredData)$Population[i]
   vessel <- pData(filteredData)$Vessel[i]
   media <- pData(filteredData)$Media[i]
   ploidy <- pData(filteredData)$Ploidy[i]
@@ -259,9 +259,9 @@ for(i in 1:length(filteredData)){
   timepoint <- pData(filteredData)$Timepoint[i]
   run <- pData(filteredData)$Run[i]
 
-  filtered.data<-rbind(filtered.data,cbind(FSC.A=fsc.a,SSC.A=ssc.a,FL1.A=fl1.a,FL2.A=fl2.a, FL3.A=fl3.a, FL4.A=fl4.a,SAMPLE=sample, STRAIN=strain, GENOTYPE=genotype, CLASSIFICATION = classification, VESSEL=vessel, MEDIA=media, PLOIDY=ploidy, WELL=well, EXP=exp, TIMEPOINT=timepoint, RUN=run))
+  filtered.data<-rbind(filtered.data,cbind(FSC.A=fsc.a,SSC.A=ssc.a,FL1.A=fl1.a,FL2.A=fl2.a, FL3.A=fl3.a, FL4.A=fl4.a,SAMPLE=sample, STRAIN=strain, GENOTYPE=genotype, POPULATION = population, VESSEL=vessel, MEDIA=media, PLOIDY=ploidy, WELL=well, EXP=exp, TIMEPOINT=timepoint, RUN=run))
   
-  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,STRAIN=strain,VESSEL=vessel,TIMEPOINT=timepoint,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
+  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,STRAIN=strain,POPULATION=population,VESSEL=vessel,TIMEPOINT=timepoint,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
 }  
   
  #Cleans up DataFrames
@@ -275,7 +275,7 @@ for(i in 1:length(filteredData)){
   filtered.data$SAMPLE<-as.factor(filtered.data$SAMPLE)
   filtered.data$STRAIN<-as.factor(filtered.data$STRAIN)
   filtered.data$GENOTYPE<-as.factor(filtered.data$GENOTYPE)
-  filtered.data$CLASSIFICATION<-as.factor(filtered.data$CLASSIFICATION)
+  filtered.data$POPULATION<-as.factor(filtered.data$POPULATION)
   filtered.data$VESSEL<-as.factor(filtered.data$VESSEL)
   filtered.data$MEDIA<-as.factor(filtered.data$MEDIA)
   filtered.data$PLOIDY<-as.factor(filtered.data$PLOIDY)
@@ -288,6 +288,7 @@ for(i in 1:length(filteredData)){
   stats.data<-stats.data[2:nrow(stats.data),]
   stats.data$SAMPLE<-as.factor(stats.data$SAMPLE)
   stats.data$STRAIN<-as.factor(stats.data$STRAIN)
+  stats.data$POPULATION<-as.factor(stats.data$POPULATION)
   stats.data$VESSEL<-as.factor(stats.data$VESSEL)
   stats.data$TIMEPOINT<-as.factor(stats.data$TIMEPOINT)
   stats.data$COUNT<-as.numeric(stats.data$COUNT)
@@ -529,14 +530,8 @@ all.data <- cbind(stats.data, PopProportion_zeroGFP, PopProportion_oneGFP, PopPr
 colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
 
 
-
 #Save the current dataframe
-<<<<<<< HEAD
 write.table(all.data, file="DataOut_11282018.csv", row.names=TRUE, quote=F, sep=",")
-=======
-write.table(all.data, file="DataOut_11282018.csv", row.names=TRUE, quote=F, sep="\t")
->>>>>>> 509c047aa4517ae643e612856d8426921d867964
-
 ```
 
 
