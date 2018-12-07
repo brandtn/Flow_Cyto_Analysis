@@ -469,7 +469,7 @@ barplot(summary.stats.mix$FSC_median/baseline.FSC.mix, ylab="Relative median FSC
 ##Population composition
 ```{r}
 ###GLUTAMINE###
-pop.composition.gln <- rbind(non.gfp.gln/non.debris.gln,gfp.one.cells.gln/non.debris.gln,gfp.two.cells.gln/non.debris.gln, gfp.thr.cells.gln/non.debris.gln)
+pop.composition.gln <- rbind(non.gfp.gln/non.debris.gln,gfp.one.cells.gln/non.debris.gln,gfp.two.cells.gln/non.debris.gln, gfp.thr.cells.gln/non.debris.gln) 
 barplot(pop.composition.gln, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowGln),1,11))
 
 ###GLUTAMINE UREA MIX###
