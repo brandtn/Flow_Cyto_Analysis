@@ -50,25 +50,26 @@ requireInstall <- function(packageName,isBioconductor=F) {
 }
 
 #Load libraries
-requireInstall("flowCore",isBioconductor=T)
-requireInstall("flowViz",isBioconductor=T)
-requireInstall("flowStats")
-requireInstall("Hmisc")
-requireInstall("reshape2")
-requireInstall("ggplot2")
-requireInstall("flowWorkspace")
-requireInstall("ggcyto", isBioconductor=T)
-requireInstall("gridExtra")
-requireInstall("stringr")
-requireInstall("devtools",isBioconductor=T)
-requireInstall("ggpubr",isBioconductor=T)
-devtools::install_github("guiastrennec/ggplus")
-devtools::install_github("kassambara/ggpubr")
-library("ggplus")
-library("ggpubr")
+#requireInstall("flowCore",isBioconductor=T)
+#requireInstall("flowViz",isBioconductor=T)
+#requireInstall("flowStats")
+#requireInstall("Hmisc")
+#requireInstall("reshape2")
+#requireInstall("ggplot2")
+#requireInstall("flowWorkspace")
+requireInstall("openCyto", isBioconductor=T)
+#requireInstall("ggcyto", isBioconductor=T)
+#requireInstall("gridExtra")
+#requireInstall("stringr")
+#requireInstall("devtools",isBioconductor=T)
+#requireInstall("ggpubr",isBioconductor=T)
+#devtools::install_github("guiastrennec/ggplus")
+#devtools::install_github("kassambara/ggpubr")
+#library("ggplus")
+#library("ggpubr")
 requireInstall("tidyverse")
-filter <- dplyr::filter #Currently required because dplyr is not overriding stats::filter #Seems there are to many filter functions in the libraries used
-
+#filter <- dplyr::filter #Currently required because dplyr is not overriding stats::filter #Seems there are to many filter functions in the libraries used
+#requireInstall("ncdfFlow")
 
 ```
 
@@ -96,7 +97,10 @@ tp <- 1
 #Set To "YES" to load all folders, tp must be set equal to 1
 all <- "YES"
 
-flowData <- read.flowSet(path = paste(path.data, list.folders[tp],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+files<-list.files(paste(path.data, list.folders[tp],"/", sep=""),full.names=TRUE)
+flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
+
+#flowData <- read.flowSet(path = paste(path.data, list.folders[tp],"/", sep=""), pattern=".fcs", alter.names = TRUE)
 
 sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[tp],".csv", sep=""))
 
@@ -112,11 +116,14 @@ pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
 pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
 pData(flowData)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
 pData(flowData)$Timepoint <- gsub(" ","_",sample.sheet$Timepoint)
-pData(flowData)$Run <- list.folders[1]
+pData(flowData)$Run <- list.folders[tp]
 
 if(all == "YES") {
   for(i in 2:length(list.folders)) {
-    flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+    
+    files<-list.files(paste(path.data, list.folders[i],"/", sep=""),full.names=TRUE)
+    flowData.temp <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
+    #flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
 
     sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
 
@@ -531,7 +538,7 @@ colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", 
 
 
 #Save the current dataframe
-write.table(all.data, file="DataOut_11302018.csv", row.names=TRUE, quote=F, sep=",")
+write.table(all.data, file="DataOut_12062018.csv", row.names=TRUE, quote=F, sep=",")
 ```
 
 
