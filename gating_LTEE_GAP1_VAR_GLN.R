@@ -2,8 +2,10 @@
 #gating.R       
 #
 #started: 01/07/2016
+#modified: 12/18/2018
 #
 #author1: G Avecilla, S Lauer, D Gresham
+#author2: N Brandt
 ######################
 
 ######################
@@ -32,79 +34,69 @@ library(flowViz)
 #Set working directory to the folder in which you have stored your .fcs files
 #Read in all the fcs files in the directory.
 
-path.data <-"~/Google Drive/MiniStatRun_10_2018/"
+
+#working directory
+dir = '.'
+
+#file location
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+
 
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.2", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
 
-flowData <- read.flowSet(path = paste(path.data, list.folders[1],"/", sep=""), pattern=".fcs", alter.names = TRUE)
+#fcs run sample name
+name <- "LTEE_mCitrine_GAP1_Variants_TON"
 
-sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[1],".csv", sep=""))
+#name <- list.folders[1]
+
+flowData <- read.flowSet(path = paste(path.data, name,"/", sep=""), pattern=".fcs", alter.names = TRUE)
+
+sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 
 #Adds a sample sheet data to the pData of the flowset
 
-sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
-pData(flowData)$Strain <- gsub(" ","_",sample.sheet$Strain)
-pData(flowData)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
-pData(flowData)$Classification <- gsub(" ","_",sample.sheet$Classification)
-pData(flowData)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
-pData(flowData)$Media <- gsub(" ","_",sample.sheet$Media)
-pData(flowData)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
-pData(flowData)$Well <- gsub(" ","_",sample.sheet$Well)
-pData(flowData)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
-pData(flowData)$Timepoint <- gsub(" ","_",sample.sheet$Timepoint)
-pData(flowData)$Run <- list.folders[1]
+sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
 
-#Need to go throw list 1 by 1 troubnleshooting errors
-for(i in 2:length(list.folders)) {
-  flowData.temp <- read.flowSet(path = paste(path.data,list.folders[i],"/", sep=""), pattern=".fcs", alter.names = TRUE)
-  
-  sample.sheet <- read.csv(paste(path.data,"Samplesheet_",list.folders[i],".csv", sep=""))
-  
-  #Adds a sample sheet data to the pData of the flowset
-  sampleNames(flowData.temp) <- paste(gsub(" ","_",sample.sheet$Strain),"_T",gsub(" ","_",sample.sheet$Timepoint),"_",sub(" ","_",sample.sheet$Well), sep="")
-  pData(flowData.temp)$Strain <- gsub(" ","_",sample.sheet$Strain)
-  pData(flowData.temp)$Genotype <- gsub(" ","_",sample.sheet$Genotype)
-  pData(flowData.temp)$Classification <- gsub(" ","_",sample.sheet$Classification)
-  pData(flowData.temp)$Vessel <- gsub(" ","_",sample.sheet$Vessel)
-  pData(flowData.temp)$Media <- gsub(" ","_",sample.sheet$Media)
-  pData(flowData.temp)$Ploidy <- gsub(" ","_",sample.sheet$Ploidy)
-  pData(flowData.temp)$Well <- gsub(" ","_",sample.sheet$Well)
-  pData(flowData.temp)$Experiment <- gsub(" ","_",sample.sheet$Experiment)
-  pData(flowData.temp)$Timepoint <- gsub(" ","_",sample.sheet$Timepoint)
-  pData(flowData.temp)$Run <- list.folders[i]
-  
-  flowData <- rbind2(flowData, flowData.temp)
-}
+#Need to determine samplesheet inputs
+pData(flowData)$Well <- sample.sheet$Well
+pData(flowData)$Strain <- sample.sheet$Strain
+pData(flowData)$Genotype <- sample.sheet$Genotype
+pData(flowData)$Ploidy <- sample.sheet$Ploidy
+pData(flowData)$Media <- sample.sheet$Media
+pData(flowData)$Experiment <- sample.sheet$Experiment
 
-filt <- "ON"
-gateData <- subset(flowData, pData(flowData)$Timepoint == filt)
+gateData <- flowData
 
 ##Confirm the number of .fcs files in your folder. The script below is only accurate if there are 32 .fcs files
 str(gateData) #it should say there are 32 observations. if not, rework the script
 
+zerocopy <- 1
+onecopy <- 3
+two copy <-4
+
 ##############################
 #1. Generate gate for singlet cells####
 #this gate is defined on the basis of the relationship between forward scatter height and area
-plot(gateData[[1]], c('FSC.H','FSC.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,3e6),smooth=F)
-Agate <- locator(10)
-gm.1 <- matrix(,8,2)
+plot(gateData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,3e6),smooth=F)
+Agate <- locator(10, type='l', col='red')
+gm.1 <- matrix(,length(Agate$x),2)
 colnames(gm.1) <- c('FSC.H','FSC.A')
 gm.1[,1] <- Agate$x
 gm.1[,2] <- Agate$y
 pg.singlets <- polygonGate(filterId="singlets",.gate=gm.1)
-
-polygon(Agate$x, Agate$y, border='red')
 
 #test that the singlet gate looks reasonable for some samples (these are all 0 copy controls)
 xyplot(FSC.A~FSC.H,data=gateData[[16]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 xyplot(FSC.A~FSC.H,data=gateData[[15]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 xyplot(FSC.A~FSC.H,data=gateData[[14]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 
-#a one copy control
-xyplot(FSC.A~FSC.H,data=gateData[[4]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 
+#a zero copy control
+xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
+#a one copy control
+xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 #a two copy control
-xyplot(FSC.A~FSC.H,data=gateData[[3]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
+xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
 
 
 ##############################
@@ -112,15 +104,13 @@ xyplot(FSC.A~FSC.H,data=gateData[[3]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, fi
 #This needs to be done separately for each media condition.
 
 ######GLUTAMINE#####
-plot(gateData[[1]], c('FSC.A','SSC.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,6e5), smooth=F)
-Bgate <- locator(10)
-gm.2 <- matrix(,8,2)
+plot(gateData[[zerocopy]], c('FSC.A','SSC.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,6e5), smooth=F)
+Bgate <- locator(10, type='l', col='red')
+gm.2 <- matrix(,length(Bgate$x),2)
 colnames(gm.2) <- c('FSC.A','SSC.A')
 gm.2[,1] <- Bgate$x
 gm.2[,2] <- Bgate$y
 pg.nondebris <- polygonGate(filterId="nonDebris",.gate=gm.2)
-
-polygon(Bgate$x, Bgate$y, border='red')
 
 #test that the debris gate looks reasonable for some samples (these are 1 and 2 copy controls)
 xyplot(SSC.A ~ FSC.A, data=gateData[[13]], displayFilter=TRUE, xlim=c(0,2e6), ylim=c(0,1e6), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T)
@@ -128,38 +118,64 @@ xyplot(SSC.A ~ FSC.A, data=gateData[[12]], displayFilter=TRUE, xlim=c(0,2e6), yl
 xyplot(SSC.A ~ FSC.A, data=gateData[[11]], displayFilter=TRUE, xlim=c(0,2e6), ylim=c(0,1e6), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T)
 
 
+#a zero copy control
+xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
+#a one copy control
+xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
+#a two copy control
+xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
+
+
 #############################
 #3. FLUORESCENCE####
 
-####Generate gates for 0, 1, 2, and 3+ copies for GLUTAMINE-limitation####
+####Generate gates for 0, 1, 2, and 3+ copies####
 
 ##Plot the control sample that has non-fluorescing cells (0 copy)
-plot(gateData[[1]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(-1e4,1e5), smooth=F)
-glngate.0 <- locator(10, type='l', col='red')
+plot(gateData[[zerocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(-1e4,1e5), smooth=F)
+Cgate <- locator(10, type='l', col='red')
+gm.3 <- matrix(,length(Cgate$x),2)
+colnames(gm.3) <- c('FSC.A','SSC.A')
+gm.3[,1] <- Cgate$x
+gm.3[,2] <- Cgate$y
+fl1gate.0 <- polygonGate(filterId="zeroFL1",.gate=gm.3)
 
-##Plot the control sample that has 1 copy
-plot(gateData[[4]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,4e5), smooth=F)
+#a zero copy control
+xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
+#a one copy control
+xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
+#a two copy control
+xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
 
-##Overlay your previous gate
-polygon(glngate.0$x, glngate.0$y, border='red')
 
 ##Draw a new gate for the one copy
-glngate.1 <- locator(10, type='l', col='blue')
+plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(-1e4,1e5), smooth=F)
+Dgate <- locator(10, type='l', col='blue')
+gm.4 <- matrix(,length(Dgate$x),2)
+colnames(gm.4) <- c('FSC.A','FL1.A')
+gm.4[,4] <- Dgate$x
+gm.4[,4] <- Dgate$y
+fl1gate.1 <- polygonGate(filterId="oneCopyFL1",.gate=gm.4)
+
 
 ##Overlay and check the new gate
-plot(gateData[[4]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,3e5), smooth=F)
-polygon(glngate.0$x, glngate.0$y, border='red')
-polygon(glngate.1$x, glngate.1$y, border='blue')
+plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,3e5), smooth=F)
+polygon(fl1gate.0$x, fl1gate.0$y, border='red')
+polygon(fl1gate.1$x, fl1gate.1$y, border='blue')
 
 ##Plot the control sample that has 2 copies
-plot(gateData[[2]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,4e5), smooth=F)
-polygon(glngate.0$x, glngate.0$y, border='red')
-polygon(glngate.1$x, glngate.1$y, border='blue')
-glngate.2 <- locator(10, type='l', col='green')
-glngate.3 <- locator(10, type="l", col='purple')
+plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,4e5), smooth=F)
+polygon(fl1gate.0$x, fl1gate.0$y, border='red')
+polygon(fl1gate.1$x, fl1gate.1$y, border='blue')
+fl1gate.2 <- locator(10, type='l', col='green')
+fl1gate.3 <- locator(10, type="l", col='purple')
 
 ##Check how the gates look on the sample
-plot(gateData[[2]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,5e5), smooth=F)
+plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,5e5), smooth=F)
+
+
+
+
 polygon(glngate.0$x, glngate.0$y, border='red')
 polygon(glngate.1$x, glngate.1$y, border='blue')
 polygon(glngate.2$x, glngate.2$y, border='green')
@@ -194,4 +210,4 @@ gln.three<- polygonGate(filterId="ThreeCopyGlutamine",.gate=glngm.3)
 
 #Save the gate information to an R data file
 rm(list=c("gateData")) 
-save(pg.singlets, pg.nondebris, gln.zero, gln.one, gln.two, gln.three, file="gates_LTEE_GAP1_Var.Rdata")
+save(pg.singlets, pg.nondebris, gln.zero, gln.one, gln.two, gln.three, file=paste(name,"_gates"_,Sys.Date(),".Rdata",sep=""))

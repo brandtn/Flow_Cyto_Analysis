@@ -75,7 +75,7 @@ Variables for the user to set can be found in chunk one. These include both requ
 dir = '.'
 
 #file location
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
 
 #fcs run sample name
 name = "LTEE_mCitrine_GAP1_Variants_TON"
@@ -103,13 +103,13 @@ sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA
 #FlowSet
 save.flowset <- "No"
 #filename
-folder.flowset <- "EXPflowdataDATE"
+folder.flowset <- paste(name,"flowdata",Sys.Date(),sep="")
 #DataFrame - Individual data points
 save.df <- "Yes"
-file.df <- "EXPdfDATE"
+file.df <- paste(name,"df",Sys.Date(),sep="")
 #DataFrame - Experiment Statistics
 save.stats <- "Yes"
-file.stats <- "EXPstatsDATE"
+file.stats <- paste(name,"stats",Sys.Date(),sep="")
 
 ```
 
