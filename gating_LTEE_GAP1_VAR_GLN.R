@@ -153,8 +153,21 @@ fl1gate.1 <- polygonGate(filterId="oneCopyFL1",.gate=gm.4)
 
 ##Overlay and check the new gate
 ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
+<<<<<<< HEAD
+=======
 
+>>>>>>> cdacfaf1f9316168a96e6af34b24d7a7d9100fb7
 
+##Plot the control sample that has 2 copies and draw a new gate for two copy
+ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
+Egate <- locator(10, type='l', col='green')
+gm.5 <- matrix(,length(Egate$x),2)
+colnames(gm.5) <- c('FSC.A','FL1.A')
+gm.5[,4] <- Egate$x
+gm.5[,4] <- Egate$y
+fl1gate.2 <- polygonGate(filterId="twoCopyFL1",.gate=gm.5)
+
+<<<<<<< HEAD
 ##Plot the control sample that has 2 copies and draw a new gate for two copy
 ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
 Egate <- locator(10, type='l', col='green')
@@ -179,6 +192,23 @@ fl1gate.3 <- polygonGate(filterId="2plusCopyFL1",.gate=gm.6)
 #Look at the gating on the controls
 ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
 
+=======
+##Plot the control sample that has 2 copies and draw a new gate for more then 2 copies
+ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2)
+Fgate <- locator(10, type='l', col='purple')
+gm.6 <- matrix(,length(Fgate$x),2)
+colnames(gm.5) <- c('FSC.A','FL1.A')
+gm.6[,4] <- Fgate$x
+gm.6[,4] <- Fgate$y
+fl1gate.3 <- polygonGate(filterId="2plusCopyFL1",.gate=gm.6)
+
+
+
+
+#Look at the gating on the controls
+ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
+
+>>>>>>> cdacfaf1f9316168a96e6af34b24d7a7d9100fb7
 ##Check how the gates look on the sample
 ggcyto(gateData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
 
