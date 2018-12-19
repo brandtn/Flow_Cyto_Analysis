@@ -28,6 +28,8 @@
 #Load libraries
 library(flowCore)
 library(flowViz)
+library(ggcyto)
+
 
 #Read in the data
 
@@ -58,6 +60,7 @@ sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
 
 #Need to determine samplesheet inputs
+pData(flowData)$name <- sampleNames(flowData)
 pData(flowData)$Well <- sample.sheet$Well
 pData(flowData)$Strain <- sample.sheet$Strain
 pData(flowData)$Genotype <- sample.sheet$Genotype
@@ -72,12 +75,13 @@ str(gateData) #it should say there are 32 observations. if not, rework the scrip
 
 zerocopy <- 1
 onecopy <- 3
-two copy <-4
+twocopy <-4
 
 ##############################
 #1. Generate gate for singlet cells####
 #this gate is defined on the basis of the relationship between forward scatter height and area
-plot(gateData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,3e6),smooth=F)
+
+ggcyto(gateData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) 
 Agate <- locator(10, type='l', col='red')
 gm.1 <- matrix(,length(Agate$x),2)
 colnames(gm.1) <- c('FSC.H','FSC.A')
@@ -85,18 +89,15 @@ gm.1[,1] <- Agate$x
 gm.1[,2] <- Agate$y
 pg.singlets <- polygonGate(filterId="singlets",.gate=gm.1)
 
-#test that the singlet gate looks reasonable for some samples (these are all 0 copy controls)
-xyplot(FSC.A~FSC.H,data=gateData[[16]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
-xyplot(FSC.A~FSC.H,data=gateData[[15]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
-xyplot(FSC.A~FSC.H,data=gateData[[14]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
+
+#Look at the gating on the controls
+ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
 
 
-#a zero copy control
-xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
-#a one copy control
-xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
-#a two copy control
-xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
+#test that the singlet gate looks reasonable for All samples
+ggcyto(gateData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
+
+
 
 
 ##############################
@@ -104,7 +105,7 @@ xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth
 #This needs to be done separately for each media condition.
 
 ######GLUTAMINE#####
-plot(gateData[[zerocopy]], c('FSC.A','SSC.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,6e5), smooth=F)
+ggcyto(gateData[zerocopy], aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + geom_gate(pg.nondebris)
 Bgate <- locator(10, type='l', col='red')
 gm.2 <- matrix(,length(Bgate$x),2)
 colnames(gm.2) <- c('FSC.A','SSC.A')
@@ -112,18 +113,12 @@ gm.2[,1] <- Bgate$x
 gm.2[,2] <- Bgate$y
 pg.nondebris <- polygonGate(filterId="nonDebris",.gate=gm.2)
 
-#test that the debris gate looks reasonable for some samples (these are 1 and 2 copy controls)
-xyplot(SSC.A ~ FSC.A, data=gateData[[13]], displayFilter=TRUE, xlim=c(0,2e6), ylim=c(0,1e6), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T)
-xyplot(SSC.A ~ FSC.A, data=gateData[[12]], displayFilter=TRUE, xlim=c(0,2e6), ylim=c(0,1e6), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T)
-xyplot(SSC.A ~ FSC.A, data=gateData[[11]], displayFilter=TRUE, xlim=c(0,2e6), ylim=c(0,1e6), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T)
+#Look at the gating on the controls
+ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.nondebris)
 
 
-#a zero copy control
-xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
-#a one copy control
-xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
-#a two copy control
-xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.nondebris, outline=T)
+#test that the singlet gate looks reasonable for All samples
+ggcyto(gateData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.nondebris)
 
 
 #############################
@@ -132,24 +127,21 @@ xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth
 ####Generate gates for 0, 1, 2, and 3+ copies####
 
 ##Plot the control sample that has non-fluorescing cells (0 copy)
-plot(gateData[[zerocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(-1e4,1e5), smooth=F)
+ggcyto(gateData[zerocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
+
 Cgate <- locator(10, type='l', col='red')
 gm.3 <- matrix(,length(Cgate$x),2)
-colnames(gm.3) <- c('FSC.A','SSC.A')
+colnames(gm.3) <- c('FSC.A','FL1.A')
 gm.3[,1] <- Cgate$x
 gm.3[,2] <- Cgate$y
 fl1gate.0 <- polygonGate(filterId="zeroFL1",.gate=gm.3)
 
-#a zero copy control
-xyplot(FSC.A~FSC.H,data=gateData[[zerocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
-#a one copy control
-xyplot(FSC.A~FSC.H,data=gateData[[onecopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
-#a two copy control
-xyplot(FSC.A~FSC.H,data=gateData[[twocopy]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=fl1gate.0, outline=T)
+#Look at the gating on the controls
+ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0)
 
 
 ##Draw a new gate for the one copy
-plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(-1e4,1e5), smooth=F)
+ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
 Dgate <- locator(10, type='l', col='blue')
 gm.4 <- matrix(,length(Dgate$x),2)
 colnames(gm.4) <- c('FSC.A','FL1.A')
@@ -159,55 +151,38 @@ fl1gate.1 <- polygonGate(filterId="oneCopyFL1",.gate=gm.4)
 
 
 ##Overlay and check the new gate
-plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,3e5), smooth=F)
-polygon(fl1gate.0$x, fl1gate.0$y, border='red')
-polygon(fl1gate.1$x, fl1gate.1$y, border='blue')
+ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
 
-##Plot the control sample that has 2 copies
-plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), xaxs = "i", yaxs = "i", ylim=c(0,4e5), smooth=F)
-polygon(fl1gate.0$x, fl1gate.0$y, border='red')
-polygon(fl1gate.1$x, fl1gate.1$y, border='blue')
-fl1gate.2 <- locator(10, type='l', col='green')
-fl1gate.3 <- locator(10, type="l", col='purple')
+
+##Plot the control sample that has 2 copies and draw a new gate for two copy
+ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
+Egate <- locator(10, type='l', col='green')
+gm.5 <- matrix(,length(Egate$x),2)
+colnames(gm.5) <- c('FSC.A','FL1.A')
+gm.5[,4] <- Egate$x
+gm.5[,4] <- Egate$y
+fl1gate.2 <- polygonGate(filterId="twoCopyFL1",.gate=gm.5)
+
+##Plot the control sample that has 2 copies and draw a new gate for more then 2 copies
+ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2)
+Fgate <- locator(10, type='l', col='purple')
+gm.6 <- matrix(,length(Fgate$x),2)
+colnames(gm.5) <- c('FSC.A','FL1.A')
+gm.6[,4] <- Fgate$x
+gm.6[,4] <- Fgate$y
+fl1gate.3 <- polygonGate(filterId="2plusCopyFL1",.gate=gm.6)
+
+
+
+
+#Look at the gating on the controls
+ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
 
 ##Check how the gates look on the sample
-plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), xaxs = "i", yaxs = "i", ylim=c(0,5e5), smooth=F)
-
-
-
-
-polygon(glngate.0$x, glngate.0$y, border='red')
-polygon(glngate.1$x, glngate.1$y, border='blue')
-polygon(glngate.2$x, glngate.2$y, border='green')
-polygon(glngate.3$x, glngate.3$y, border='purple')
-
-glngm.0 <- matrix(,6,2)
-glngm.1 <- matrix(,5,2)
-glngm.2 <- matrix(,7,2)
-glngm.3 <- matrix(,6,2)
-
-colnames(glngm.0) <- c('FSC.A','FL1.A')
-colnames(glngm.1) <- c('FSC.A','FL1.A')
-colnames(glngm.2) <- c('FSC.A','FL1.A')
-colnames(glngm.3) <- c('FSC.A','FL1.A')
-
-glngm.0[,1] <- glngate.0$x
-glngm.1[,1] <- glngate.1$x
-glngm.2[,1] <- glngate.2$x
-glngm.3[,1] <- glngate.3$x
-
-glngm.0[,2] <- glngate.0$y
-glngm.1[,2] <- glngate.1$y
-glngm.2[,2] <- glngate.2$y
-glngm.3[,2] <- glngate.3$y
-
-gln.zero<- polygonGate(filterId="ZeroCopyGlutamine",.gate=glngm.0)
-gln.one<- polygonGate(filterId="OneCopyGlutamine",.gate=glngm.1)
-gln.two<- polygonGate(filterId="TwoCopyGlutamine",.gate=glngm.2)
-gln.three<- polygonGate(filterId="ThreeCopyGlutamine",.gate=glngm.3)
+ggcyto(gateData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
 
 
 
 #Save the gate information to an R data file
 rm(list=c("gateData")) 
-save(pg.singlets, pg.nondebris, gln.zero, gln.one, gln.two, gln.three, file=paste(name,"_gates"_,Sys.Date(),".Rdata",sep=""))
+save(pg.singlets, pg.nondebris, fl1gate.0, fl1gate.1, fl1gate.2, fl1gate.3, file=paste(name,"_gates"_,Sys.Date(),".Rdata",sep=""))
