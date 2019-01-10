@@ -81,6 +81,8 @@ twocopy <-4
 #1. Generate gate for singlet cells####
 #this gate is defined on the basis of the relationship between forward scatter height and area
 
+plot(gateData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), ylim=c(0,3e6),smooth=F)
+
 ggcyto(gateData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) 
 Agate <- locator(10, type='l', col='red')
 gm.1 <- matrix(,length(Agate$x),2)
@@ -89,16 +91,23 @@ gm.1[,1] <- Agate$x
 gm.1[,2] <- Agate$y
 pg.singlets <- polygonGate(filterId="singlets",.gate=gm.1)
 
+ggcyto(gateData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + geom_gate(pg.singlets)
+
+
+#test that the singlet gate looks reasonable for the sample
+xyplot(FSC.A~FSC.H,data=flowData[[s]],xlim=c(0,3e6), ylim=c(0,3e6), smooth=F, filter=pg.singlets, outline=T)
+
+#test that the gate looks reasonable over all the samples
+xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), 
+       smooth=F, filter=pg.singlets, outline=T, displayFilter=TRUE,
+       stat=T, pos=0.5, abs=T)
+
 
 #Look at the gating on the controls
 ggcyto(gateData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
 
-
 #test that the singlet gate looks reasonable for All samples
 ggcyto(gateData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
-
-
-
 
 ##############################
 #2. Generate Gate for debris based on forward scatter and side scatter. ####
