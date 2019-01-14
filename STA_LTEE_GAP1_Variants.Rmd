@@ -75,10 +75,13 @@ Variables for the user to set can be found in chunk one. These include both requ
 dir = '.'
 
 #file location
-path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+
 
 #fcs run sample name
-name = "LTEE_mCitrine_GAP1_Variants_TON"
+name <- list.folders[17]
 
 #fcs data to extract
 extract.FSC_A <- "Yes"
@@ -100,13 +103,17 @@ extract.Time  <- "No"
 sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA)
 
 #style of output
+#Proportional Data
+save.prop <- "Yes"
+#filename
+file.prop <- paste(name,"_prop_",Sys.Date(),sep="")
 #FlowSet
 save.flowset <- "No"
 #filename
 folder.flowset <- paste(name,"flowdata",Sys.Date(),sep="")
 #DataFrame - Individual data points
 save.df <- "Yes"
-file.df <- paste(name,"df",Sys.Date(),sep="")
+file.df <- paste(name,"_df_",Sys.Date(),sep="")
 #DataFrame - Experiment Statistics
 save.stats <- "Yes"
 file.stats <- paste(name,"stats",Sys.Date(),sep="")
@@ -135,6 +142,8 @@ flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
 
 sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
+sample.sheet <- sample.sheet[order(sample.sheet$Well),]
+
 
 #Adds a sample sheet data to the pData of the flowset
 
@@ -150,7 +159,7 @@ pData(flowData)$Experiment <- sample.sheet$Experiment
 
 
 #Load Gates
-load(file = "gates.RData")
+load(file = "gates_2019-01-13.RData")
 
 ```
 
@@ -183,14 +192,24 @@ non.debris <- fsApply(filteredData, each_col, length)[1:samples.num]
 print(non.debris)
 
 #this gate defines nonFL1 cells
-flone.neg <- Subset(filteredData, pg.nonflone) 
+flone.neg <- Subset(filteredData, fl1gate.0) 
 flone.neg.cells <- fsApply(flone.neg, each_col, length)[1:samples.num]
 print(flone.neg.cells)
 
-#this gate defines flouresecent cells
-flone.pos <- Subset(filteredData, pg.flone) 
-flone.pos.cells <- fsApply(flone.pos, each_col, length)[1:samples.num]
-print(flone.pos.cells)
+#this gate defines 1-copy flouresecent cells
+flone.one <- Subset(filteredData, fl1gate.1) 
+flone.one.cells <- fsApply(flone.one, each_col, length)[1:samples.num]
+print(flone.one.cells)
+
+#this gate defines 2-copy flouresecent cells
+flone.two <- Subset(filteredData, fl1gate.2) 
+flone.two.cells <- fsApply(flone.two, each_col, length)[1:samples.num]
+print(flone.two.cells)
+
+#this gate defines 3+-copy flouresecent cells
+flone.three <- Subset(filteredData, fl1gate.3) 
+flone.three.cells <- fsApply(flone.three, each_col, length)[1:samples.num]
+print(flone.three.cells)
 
 ```
 
@@ -206,14 +225,16 @@ xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singl
 xyplot(SSC.A ~ FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,3e6), ylim=c(0,3e5), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - nondebris gate")
 
 #Non-fluorescent population gate
-xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=pg.nonflone, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - non GFP gate")
+xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.0, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - non GFP gate")
 
-#Fluorescent population gate
-xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=pg.flone, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - GFP gate")
+#1 copy Fluorescent population gate
+xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.1, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - GFP gate")
 
-#High fluorescing gate
-xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=pg.hi.flone, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - high GFP gate")
+#2 copy fluorescing gate
+xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.2, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - high GFP gate")
 
+#3+ copy fluorescing gate
+xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.3, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - high GFP gate")
 
 ```
 
@@ -256,7 +277,7 @@ xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T,
 #Transfer data into a dataframe
 
 #Move filtered data into a dataframe
-stats.data <- sample.param
+filtered.data <- sample.param
 if(extract.FSC_A == "Yes"){filtered.data<-cbind(filtered.data, FSC.A=NA)}
 if(extract.SSC_A == "Yes"){filtered.data<-cbind(filtered.data, SSC.A=NA)}
 if(extract.FL1_A == "Yes"){filtered.data<-cbind(filtered.data, FL1.A=NA)}
@@ -470,14 +491,14 @@ ggplot(stats.data,aes(x=SAMPLE, y = non.debris/total)) +
   scale_x_discrete(labels=stats.data$SAMPLE)+
   ylab("Proportion Non-debris Cells")
 
-ggplot(stats.data,aes(x=SAMPLE, y = flone.neg/non.debris)) +
+ggplot(stats.data,aes(x=SAMPLE, y = flone.neg.cells/non.debris)) +
   geom_col() +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
   scale_x_discrete(labels=stats.data$SAMPLE)+
   ylab("Proportion Cells with no Flourescense")
 
-ggplot(stats.data,aes(x=SAMPLE, y = flone.pos.cells/non.debris)) +
+ggplot(stats.data,aes(x=SAMPLE, y = flone.one.cells/non.debris)) +
   geom_col() +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
@@ -491,7 +512,7 @@ ggplot(stats.data,aes(x=SAMPLE, y = flone.pos.cells/non.debris)) +
 ##Population composition
 ```{r}
 ###GLUTAMINE###
-pop.composition <- rbind(non.gfp/non.debris,gfp.one.cells/non.debris,gfp.two.cells/non.debris, gfp.thr.cells/non.debris)
+pop.composition <- rbind(flone.neg.cells/non.debris,flone.one.cells/non.debris,flone.two.cells/non.debris, flone.three.cells/non.debris)
 barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowData),1,11))
 
 
@@ -500,16 +521,16 @@ barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "On
 ##Extract data for further processing
 ```{r Extract data for further processing}
 
-PopProportion_zeroGFP <- non.gfp/non.debris
-PopProportion_oneGFP <- gfp.one.cells/non.debris
-PopProportion_twoGFP <- gfp.two.cells/non.debris
-PopProportion_threeGFP <- gfp.thr.cells/non.debris
+PopProportion_zeroGFP <- flone.neg.cells/non.debris
+PopProportion_oneGFP <- flone.one.cells/non.debris
+PopProportion_twoGFP <- flone.two.cells/non.debris
+PopProportion_threeGFP <- flone.three.cells/non.debris
 all.data <- cbind(stats.data, PopProportion_zeroGFP, PopProportion_oneGFP, PopProportion_twoGFP, PopProportion_threeGFP, non.debris)
 colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
 
 
 #Save the current dataframe
-write.table(all.data, file="DataOut_11302018.csv", row.names=TRUE, quote=F, sep=",")
+if(save.prop == "Yes"){write.table(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, quote=F, sep=",")}
 ```
 
 
@@ -518,7 +539,7 @@ write.table(all.data, file="DataOut_11302018.csv", row.names=TRUE, quote=F, sep=
 
 if(save.flowset == "Yes"){write.flowSet(flowData, folder.flowset)}
 
-if(save.df== "Yes"){save(filtered.data, paste(file.df,".Rdata",sep="")}
+if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}
 
 if(save.stats== "Yes"){write.table(stats.data, file= file.stats, row.names=TRUE, quote=F, sep=",")}
 

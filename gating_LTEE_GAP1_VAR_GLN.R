@@ -41,15 +41,16 @@ library(ggcyto)
 dir = '.'
 
 #file location
-path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 
 
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.2", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
 
 #fcs run sample name
-name <- "LTEE_mCitrine_GAP1_Variants_TON"
+#name <- "LTEE_mCitrine_GAP1_Variants_TON"
 
-#name <- list.folders[1]
+name <- list.folders[4]
 
 flowData <- read.flowSet(path = paste(path.data, name,"/", sep=""), pattern=".fcs", alter.names = TRUE)
 
@@ -57,8 +58,8 @@ sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 sample.sheet <- sample.sheet[order(sample.sheet$Well),]
 #Adds a sample sheet data to the pData of the flowset
 
-sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
-#sampleNames(flowData) <-paste(sub(" ","_",sample.sheet$Well),"_",gsub(" ","_",sample.sheet$Strain),"_", sampleNames(flowData), sep="")
+#sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
+sampleNames(flowData) <-paste(sub(" ","_",sample.sheet$Well),"_",gsub(" ","_",sample.sheet$Strain),"_", sampleNames(flowData), sep="")
 
 #Need to determine samplesheet inputs
 pData(flowData)$name <- sampleNames(flowData)
@@ -72,8 +73,8 @@ pData(flowData)$Experiment <- sample.sheet$Experiment
 gateData <- flowData
 
 zerocopy <- 1
-onecopy <- 5
-twocopy <-7
+onecopy <- 2
+twocopy <- 3
 
 
 #Sampel Check
@@ -88,13 +89,22 @@ ggplot(flowData, aes(name,FL1.A/FSC.A)) +
   scale_x_discrete(labels=pData(flowData)$name)
 
 
+ggcyto(flowData[c(1,9,13)], aes(`FL1.A`)) + geom_density() + xlim(0,5e5)
+ggplot(flowData[c(1,9,13)], aes(name,FL1.A/FSC.A)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+  stat_boxplot(geom ='errorbar', colour = "lightgreen") +
+  geom_boxplot(outlier.shape = NA, colour = "lightgreen") +
+  scale_y_log10()+
+  scale_x_discrete(labels=pData(flowData)$name)
+
 ##############################
 #1. Generate gate for singlet cells####
 #this gate is defined on the basis of the relationship between forward scatter height and area
 
-plot(gateData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), ylim=c(0,3e6),smooth=F)
+plot(gateData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), ylim=c(0,3e6),smooth=T)
 
-#ggcyto(gateData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) 
+#ggcyto(gateData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6)
 Agate <- locator(10, type='l', col='red')
 gm.1 <- matrix(,length(Agate$x),2)
 colnames(gm.1) <- c('FSC.H','FSC.A')
@@ -115,7 +125,7 @@ ggcyto(gateData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0
 #This needs to be done separately for each media condition.
 
 
-plot(gateData[[zerocopy]], c('FSC.A','SSC.A'), xlim=c(0,3e6), ylim=c(0,1e6),smooth=F)
+plot(gateData[[zerocopy]], c('FSC.A','SSC.A'), xlim=c(0,3e6), ylim=c(0,1e6),smooth=T)
 
 #ggcyto(gateData[zerocopy], aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512)
 Bgate <- locator(10, type='l', col='red')
@@ -139,7 +149,7 @@ ggcyto(gateData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0
 ####Generate gates for 0, 1, 2, and 3+ copies####
 
 ##Plot the control sample that has non-fluorescing cells (0 copy)
-plot(gateData[[zerocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,5e4),smooth=F)
+plot(gateData[[zerocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,5e4),smooth=T)
 
 
 #ggcyto(gateData[zerocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
@@ -157,8 +167,8 @@ ggcyto(gateData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0
 
 
 ##Draw a new gate for the one copy
-plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6),smooth=F)
-
+plot(gateData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,5e5),smooth=T)
+polygon(Cgate)
 
 #ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
 Dgate <- locator(10, type='l', col='blue')
@@ -172,7 +182,8 @@ fl1gate.1 <- polygonGate(filterId="oneCopyFL1",.gate=gm.4)
 ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
 
 ##Plot the control sample that has 2 copies and draw a new gate for two copy
-plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,2e6),smooth=F)
+plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), ylim=c(0,5e5),smooth=T)
+polygon(Dgate)
 
 #ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
 Egate <- locator(10, type='l', col='green')
@@ -189,7 +200,8 @@ ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
 
 
 ##Plot the control sample that has 2 copies and draw a new gate for more then 2 copies
-plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,2e6), smooth=F)
+plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6), smooth=T)
+polygon(Egate)
 
 
 #ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2)

@@ -17,22 +17,42 @@ This is the code to generate figures about CNV dynamics from aggregated flow cyt
 
 ###To get libraries from BioConductor.  This only needs to be run the first time
 #source("http://bioconductor.org/biocLite.R")
-#biocLite("flowViz")
-#biocLite("flowCore")
+#biocLite("ggcyto")
+#biocLite("tidyverse")
 
 #Load libraries
-library(flowCore)
-library(flowViz)
-library(ggplot2)
-library(reshape2)
+library(ggcyto)
 library(tidyverse)
 
 
+
+#working directory
+dir = '.'
+
+#file location
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+
+timepoint <- c(0, 4, 8, 12, 24, 25, 32, 33, 36, 40, 52, 64, 80, 92, 100, 108, 128)
+
+date <- '2019-01-13'
+
+data <- read_csv(paste(list.folders[1],"_prop_",date,".csv", sep=""))
+data <- data %>% add_column(TIMEPOINT=timepoint[1]) %>% select(-SAMPLE)
+
+
+for(i in 2:length(list.folders)){
+  data.temp <- read_csv(paste(list.folders[i],"_prop_",date,".csv", sep=""))
+  
+  data<- bind_rows(data, data.temp %>% add_column(TIMEPOINT=timepoint[i]) %>% select(-SAMPLE))
+}
+
 #Data located here:
-alldata_unmasked <- read.csv("DataOut_11302018.csv")
+#alldata_unmasked <- read.csv("DataOut_11302018.csv")
 
 #Mask out data with fewer than 75000 cells counted
-alldata=alldata_unmasked %>% filter(Cells.counted > 75000)
+#alldata=alldata_unmasked %>% filter(Cells.counted > 75000)
 
 ```
 
@@ -40,11 +60,13 @@ alldata=alldata_unmasked %>% filter(Cells.counted > 75000)
 
 
 ```{r Median fl1 over time}
+alldata <- data
+
 ###PLOT NORMALIZED FLUOR###
-myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=STRAIN)) +
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=GENOTYPE)) +
   geom_point() +
-  geom_line(aes(linetype=VESSEL), size=1.2) +
-  scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  geom_line(aes(linetype=GENOTYPE), size=1.2) +
+  scale_y_continuous('Normalized fluorescence signal') +
   #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
   scale_x_continuous("Generations") +
   theme_classic() +
@@ -58,15 +80,15 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=STRA
 myplot %+% subset(alldata, POPULATION %in% c("Genomic_Architecture_Mutant"))
 
 #median unnormalized fluor#
-myplot <- ggplot(alldata, aes(x=Generation,y=(FL1_median), colour=Sample)) +
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=GENOTYPE)) +
   geom_point() +
-  geom_line(aes(linetype=Population), size=1.2) +
+  geom_line(aes(linetype=GENOTYPE), size=1.2) +
   #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
-  scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
   scale_x_continuous("Generations") +
   theme_classic() +
   #scale_color_brewer(palette="Spectral", direction = 1) +
-  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
   #facet_grid(Population ~ .) +
   #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
@@ -78,7 +100,7 @@ myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
 
 ```{r Proportion CNV cells}
 ###PLOT PROPORTION OF 2 copy CELLS###
-myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_2copy), colour=Sample)) +
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(PopProp_2copy), colour=GENOTYPE)) +
   geom_point() +
   geom_line(size=1.2) +
   scale_y_continuous('Proportion of cells with 2 copies', limits=c(0,1)) +
@@ -86,7 +108,7 @@ myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_2copy), colour=Sample)) +
   scale_x_continuous("Generations") +
   theme_classic() +
   #scale_color_brewer(palette="Spectral", direction = 1) +
-  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
   #facet_grid(Population ~ .) +
   #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
@@ -95,7 +117,7 @@ myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_2copy), colour=Sample)) +
 myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
 
 ###PLOT PROPORTION OF 3+ COPY CELLS###
-myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_3plus), colour=Sample)) +
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(PopProp_3plus), colour=GENOTYPE)) +
   geom_point() +
   geom_line(size=1.2) +
   scale_y_continuous('Proportion of cells with 3+ copies', limits=c(0,1)) +
@@ -103,7 +125,7 @@ myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_3plus), colour=Sample)) +
   scale_x_continuous("Generations") +
   theme_classic() +
   #scale_color_brewer(palette="Spectral", direction = 1) +
-  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
   #facet_grid(Population ~ .) +
   #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
@@ -115,7 +137,7 @@ myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Exp
 
 ```{r FSC over time}
 ####FSC over time####
-myplot <- ggplot(alldata, aes(x=Generation,y=(FSC_median), colour=Sample)) +
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FSC_MEDIAN), colour=GENOTYPE)) +
   geom_point() +
   geom_line(size=1.2) +
   scale_y_continuous('FSC') +
@@ -132,7 +154,7 @@ myplot <- ggplot(alldata, aes(x=Generation,y=(FSC_median), colour=Sample)) +
 myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
 
 ####FSC over time without subsetting####
-myplot <- ggplot(alldata_unmasked, aes(x=Generation,y=(FSC_median), colour=Sample)) +
+myplot <- ggplot(alldata_unmasked, aes(x=TIMEPOINT,y=(FSC_MEDIAN), colour=GENOTYPE)) +
   geom_point() +
   geom_line(size=1.2) +
   scale_y_continuous('FSC all') +
@@ -189,3 +211,17 @@ theplot %+% subset(new, Nutrient %in% c("Glutamine")) +
   facet_grid(Population ~ .)
 ```
 
+```{r}
+#Load data.frame
+
+filtered.data$gens<-factor(data2$gens,levels=unique(data2$gens))
+
+ggplot(data2, aes(x = FL1_FSC, y = gens, fill = ..x.., height=..density..)) +
+  geom_joy_gradient(scale = 1.25, rel_min_height = 0.02) +
+  scale_x_continuous("Normalized Fluorescence (a.u.)", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
+  scale_y_discrete("Generations", expand = c(0.01, 0)) +
+  facet_grid(. ~ namez) + 
+  scale_fill_distiller(type = "seq", palette = 5, direction = 1, guide = "colourbar") +
+  theme_bw() + 
+  theme(text=element_text(size=11),legend.position = 'none', legend.title = element_blank(), axis.title.y = element_text(face="bold", size=12), axis.text.y = element_text(size=10), axis.title.x = element_text(face="bold", size=12), axis.text.x = element_text(size=10))
+```
