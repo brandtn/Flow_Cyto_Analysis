@@ -23,6 +23,7 @@ This is the code to generate figures about CNV dynamics from aggregated flow cyt
 #Load libraries
 library(ggcyto)
 library(tidyverse)
+library(ggjoy)
 
 
 
@@ -34,7 +35,7 @@ dir = '.'
 path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
 
-timepoint <- c(0, 4, 8, 12, 24, 25, 32, 33, 36, 40, 52, 64, 80, 92, 100, 108, 128)
+timepoint <- c(0, 24, 28, 32, 44, 45, 52, 53, 56, 60, 72, 88, 100, 108, 116, 136)
 
 date <- '2019-01-13'
 
@@ -213,10 +214,22 @@ theplot %+% subset(new, Nutrient %in% c("Glutamine")) +
 
 ```{r}
 #Load data.frame
+i<-1
+name <- list.folders[i]
+load(paste(path.data,name,"_df_",date,".Rdata",sep=""))
+data2 <- cbind(filtered.data, TIMEPOINT=timepoint[i])
+for(i in 2:length(list.folders)) {
+  name <- list.folders[i]
+  load(paste(path.data,name,"_df_",date,".Rdata",sep=""))
+  data2.temp <- cbind(filtered.data, TIMEPOINT=timepoint[i])
+  
+  data2 <- rbind(data2, data2.temp)
+}
+
 
 filtered.data$gens<-factor(data2$gens,levels=unique(data2$gens))
 
-ggplot(data2, aes(x = FL1_FSC, y = gens, fill = ..x.., height=..density..)) +
+ggplot(filtered.data, aes(x = FL1.A/FSC.A, y = SAMPLE, fill = ..x.., height=..density..)) +
   geom_joy_gradient(scale = 1.25, rel_min_height = 0.02) +
   scale_x_continuous("Normalized Fluorescence (a.u.)", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
   scale_y_discrete("Generations", expand = c(0.01, 0)) +
