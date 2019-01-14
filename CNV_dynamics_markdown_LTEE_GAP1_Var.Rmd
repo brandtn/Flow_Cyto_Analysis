@@ -31,22 +31,37 @@ library(ggjoy)
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+#list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
 
-timepoint <- c(0, 24, 28, 32, 44, 45, 52, 53, 56, 60, 72, 88, 100, 108, 116, 136)
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+
+
+#timepoint <- c(0, 24, 28, 32, 44, 45, 52, 53, 56, 60, 72, 88, 100, 108, 116, 136)
+
+timepoint <- c(0, 24, 44, 72, 136)
 
 date <- '2019-01-13'
 
-data <- read_csv(paste(list.folders[1],"_prop_",date,".csv", sep=""))
+data <- read_csv(paste(path.data,list.folders[1],"_prop_",date,".csv", sep=""))
 data <- data %>% add_column(TIMEPOINT=timepoint[1]) %>% select(-SAMPLE)
 
 
 for(i in 2:length(list.folders)){
-  data.temp <- read_csv(paste(list.folders[i],"_prop_",date,".csv", sep=""))
+  data.temp <- read_csv(paste(path.data,list.folders[i],"_prop_",date,".csv", sep=""))
   
   data<- bind_rows(data, data.temp %>% add_column(TIMEPOINT=timepoint[i]) %>% select(-SAMPLE))
+}
+
+#Load data frame
+load(paste(path.data,list.folders[1],"_df_",date,".Rdata",sep=""))
+data2 <- cbind(filtered.data, TIMEPOINT=timepoint[1])
+for(i in 2:length(list.folders)) {
+  load(paste(path.data,list.folders[i],"_df_",date,".Rdata",sep=""))
+  data2.temp <- cbind(filtered.data, TIMEPOINT=timepoint[i])
+  
+  data2 <- rbind(data2, data2.temp)
 }
 
 #Data located here:
@@ -78,7 +93,7 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=GENO
   guides(colour = guide_legend(override.aes = list(size=2))) + 
   theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
-myplot %+% subset(alldata, POPULATION %in% c("Genomic_Architecture_Mutant"))
+myplot #%+% subset(alldata, POPULATION %in% c("Genomic_Architecture_Mutant"))
 
 #median unnormalized fluor#
 myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=GENOTYPE)) +
@@ -95,7 +110,7 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=GENOTYPE)) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
   theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
-myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
+myplot #%+% subset(alldata, Nutrient %in% c("Glutamine"))
 ```
 
 
@@ -115,7 +130,7 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(PopProp_2copy), colour=GENOTYPE)) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
   theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
-myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
+myplot #%+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
 
 ###PLOT PROPORTION OF 3+ COPY CELLS###
 myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(PopProp_3plus), colour=GENOTYPE)) +
@@ -132,7 +147,7 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(PopProp_3plus), colour=GENOTYPE)) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
   theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
-myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
+myplot# %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
 
 ```
 
@@ -214,26 +229,15 @@ theplot %+% subset(new, Nutrient %in% c("Glutamine")) +
 
 ```{r}
 #Load data.frame
-i<-1
-name <- list.folders[i]
-load(paste(path.data,name,"_df_",date,".Rdata",sep=""))
-data2 <- cbind(filtered.data, TIMEPOINT=timepoint[i])
-for(i in 2:length(list.folders)) {
-  name <- list.folders[i]
-  load(paste(path.data,name,"_df_",date,".Rdata",sep=""))
-  data2.temp <- cbind(filtered.data, TIMEPOINT=timepoint[i])
-  
-  data2 <- rbind(data2, data2.temp)
-}
 
+filtered.data$gens<-factor(data2$TIMEPOINT,levels=unique(data2$TIMEPOINT))
 
-filtered.data$gens<-factor(data2$gens,levels=unique(data2$gens))
-
-ggplot(filtered.data, aes(x = FL1.A/FSC.A, y = SAMPLE, fill = ..x.., height=..density..)) +
+ggplot(data2, aes(x = FL1.A/FSC.A, y = TIMEPOINT, fill = ..x.., height=..density..)) +
   geom_joy_gradient(scale = 1.25, rel_min_height = 0.02) +
+  facet_grid(. ~ SAMPLE)
   scale_x_continuous("Normalized Fluorescence (a.u.)", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
   scale_y_discrete("Generations", expand = c(0.01, 0)) +
-  facet_grid(. ~ namez) + 
+  facet_grid(. ~ SAMPLE) + 
   scale_fill_distiller(type = "seq", palette = 5, direction = 1, guide = "colourbar") +
   theme_bw() + 
   theme(text=element_text(size=11),legend.position = 'none', legend.title = element_blank(), axis.title.y = element_text(face="bold", size=12), axis.text.y = element_text(size=10), axis.title.x = element_text(face="bold", size=12), axis.text.x = element_text(size=10))

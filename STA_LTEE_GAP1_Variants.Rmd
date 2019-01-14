@@ -116,7 +116,7 @@ save.df <- "Yes"
 file.df <- paste(name,"_df_",Sys.Date(),sep="")
 #DataFrame - Experiment Statistics
 save.stats <- "Yes"
-file.stats <- paste(name,"stats",Sys.Date(),sep="")
+file.stats <- paste(name,"stats",Sys.Date(),".csv",sep="")
 
 ```
 
@@ -136,13 +136,18 @@ Need to define names
 
 ```{r}
 
+sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 
-files<-list.files(paste(path.data,name,"/", sep=""),full.names=TRUE)
+
+files <- paste(path.data,name,"/",sort(factor(list.files(paste(path.data,name,"/", sep=""),full.names=FALSE), levels = paste(sample.sheet$Well,".fcs",sep="" ), ordered=TRUE)),sep="")
 flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
+#files<-list.files(paste(path.data,name,"/", sep=""),full.names=TRUE)
+#flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
-sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
-sample.sheet <- sample.sheet[order(sample.sheet$Well),]
+
+#sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
+#sample.sheet <- sample.sheet[order(sample.sheet$Well),]
 
 
 #Adds a sample sheet data to the pData of the flowset
@@ -511,7 +516,6 @@ ggplot(stats.data,aes(x=SAMPLE, y = flone.one.cells/non.debris)) +
 
 ##Population composition
 ```{r}
-###GLUTAMINE###
 pop.composition <- rbind(flone.neg.cells/non.debris,flone.one.cells/non.debris,flone.two.cells/non.debris, flone.three.cells/non.debris)
 barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowData),1,11))
 
@@ -541,7 +545,7 @@ if(save.flowset == "Yes"){write.flowSet(flowData, folder.flowset)}
 
 if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}
 
-if(save.stats== "Yes"){write.table(stats.data, file= file.stats, row.names=TRUE, quote=F, sep=",")}
+if(save.stats== "Yes"){write.table(paste(stats.data, file= file.stats, row.names=TRUE, quote=F, sep=",")}
 
 ```
 

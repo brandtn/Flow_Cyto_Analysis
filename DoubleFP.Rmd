@@ -43,8 +43,10 @@ requireInstall("tidyverse")
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/DoubleFP/"
+path.data = "/Users/Brandt/Google Drive/DoubleFP/"
+#path.data = "/Users/nathanbrandt/Google Drive/DoubleFP/"
+
+name <- 'FCS'
 
 #fcs data to extract
 extract.FSC_A <- "Yes"
@@ -82,8 +84,8 @@ file.stats <- paste("DoubleFP_stats",Sys.Date(),sep="")
 ```{r}
 
 
-flowData <- read.ncdfFlowSet(files="/Users/nathanbrandt/Google Drive/DoubleFP/FCS/", pattern=".fcs", alter.names = TRUE)
-
+files<-list.files(paste(path.data,name, sep=""),full.names=TRUE)
+flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
 sample.sheet <- read.csv(paste(path.data,"Samplesheet_DoubleFP",".csv", sep=""))
 sample.sheet <- sample.sheet[order(sample.sheet$Well),]

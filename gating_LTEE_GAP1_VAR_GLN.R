@@ -41,8 +41,8 @@ library(ggcyto)
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 
 
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
@@ -50,12 +50,21 @@ list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variant
 #fcs run sample name
 #name <- "LTEE_mCitrine_GAP1_Variants_TON"
 
-name <- list.folders[4]
-
-flowData <- read.flowSet(path = paste(path.data, name,"/", sep=""), pattern=".fcs", alter.names = TRUE)
+name <- list.folders[1]
 
 sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
-sample.sheet <- sample.sheet[order(sample.sheet$Well),]
+
+
+files <- paste(path.data,name,"/",sort(factor(list.files(paste(path.data,name,"/", sep=""),full.names=FALSE), levels = paste(sample.sheet$Well,".fcs",sep="" ), ordered=TRUE)),sep="")
+flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
+
+
+
+
+#flowData <- read.flowSet(path = paste(path.data, name,"/", sep=""), pattern=".fcs", alter.names = TRUE)
+#sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
+#sample.sheet <- sample.sheet[order(sample.sheet$Well),]
+
 #Adds a sample sheet data to the pData of the flowset
 
 #sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
@@ -183,6 +192,7 @@ ggcyto(gateData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
 
 ##Plot the control sample that has 2 copies and draw a new gate for two copy
 plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), ylim=c(0,5e5),smooth=T)
+polygon(Cgate)
 polygon(Dgate)
 
 #ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
@@ -201,6 +211,8 @@ ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512)
 
 ##Plot the control sample that has 2 copies and draw a new gate for more then 2 copies
 plot(gateData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6), smooth=T)
+polygon(Cgate)
+polygon(Dgate)
 polygon(Egate)
 
 
