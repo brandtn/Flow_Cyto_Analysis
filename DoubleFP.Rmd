@@ -1,0 +1,108 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r Libraries, eval=TRUE}
+# This is a function that just makes sure you have a package, or installs it for you without prompting
+
+requireInstall <- function(packageName,isBioconductor=F) {
+  if ( !try(require(packageName,character.only=T)) ) {
+    print(paste0("You don't have ",packageName," accessible, ",
+      "I'm gonna install it"))
+    if (isBioconductor) {
+      source("http://bioconductor.org/biocLite.R")                        
+      biocLite(packageName)                                                 
+    } else {
+      install.packages("packageName", repos = "http://cran.us.r-project.org")
+    }
+  }
+  return(1)
+}
+
+#Load libraries
+requireInstall("openCyto",isBioconductor=T)
+requireInstall("tidyverse")
+```
+
+```{r User Defined Variables}
+#working directory
+dir = '.'
+
+#file location
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/DoubleFP/"
+
+#fcs data to extract
+extract.FSC_A <- "Yes"
+extract.SSC_A <- "Yes"
+extract.FL1_A <- "Yes"
+extract.FL2_A <- "No"
+extract.FL3_A <- "No"
+extract.FL4_A <- "No" 
+extract.FSC_H <- "No"
+extract.SSC_H <- "No"
+extract.FL1_H <- "No"
+extract.FL2_H <- "No"
+extract.FL3_H <- "No"
+extract.FL4_H <- "No"
+extract.Width <- "No"
+extract.Time  <- "No"
+
+#samplesheet parameters
+sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA)
+
+#style of output
+#FlowSet
+save.flowset <- "No"
+#filename
+folder.flowset <- paste("DoubleFP_flowdata",Sys.Date(),sep="")
+#DataFrame - Individual data points
+save.df <- "Yes"
+file.df <- paste("DoubleFP_df_",Sys.Date(),sep="")
+#DataFrame - Experiment Statistics
+save.stats <- "Yes"
+file.stats <- paste("DoubleFP_stats",Sys.Date(),sep="")
+
+```
+
+```{r}
+
+
+flowData <- read.ncdfFlowSet(files="/Users/nathanbrandt/Google Drive/DoubleFP/FCS/", pattern=".fcs", alter.names = TRUE)
+
+
+sample.sheet <- read.csv(paste(path.data,"Samplesheet_DoubleFP",".csv", sep=""))
+sample.sheet <- sample.sheet[order(sample.sheet$Well),]
+
+
+#Adds a sample sheet data to the pData of the flowset
+
+sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
+
+#Need to determine samplesheet inputs
+pData(flowData)$Well <- sample.sheet$Well
+pData(flowData)$Strain <- sample.sheet$Strain
+pData(flowData)$Genotype <- sample.sheet$Genotype
+pData(flowData)$Ploidy <- sample.sheet$Ploidy
+pData(flowData)$Media <- sample.sheet$Media
+pData(flowData)$Experiment <- sample.sheet$Experiment
+
+
+#Load Gates
+#load(file = "gates_2019-01-13.RData")
+
+```
