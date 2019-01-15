@@ -131,7 +131,6 @@ ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + 
 
 ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0)
 
-
 ##Draw a new gate for the one copy include the gate for zero copies
 plot(flowData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,5e5),smooth=T)
 polygon(zero.gate)
@@ -161,6 +160,11 @@ fl1gate.2 <- polygonGate(filterId="twoCopyFL1",.gate=gm.5)
 ##Overlay and check the new gate
 ggcyto(flowData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2)
 
+##Plot the control sample that has 2 copies along with the two, one, and zero copy gates and draw a new gate for more then 2 copies
+plot(flowData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6), smooth=T)
+polygon(zero.gate)
+polygon(one.gate)
+polygon(two.gate)
 
 ##Plot the control sample that has 2 copies along with the two, one, and zero copy gates and draw a new gate for more then 2 copies
 plot(flowData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6), smooth=T)
@@ -177,6 +181,12 @@ fl1gate.3 <- polygonGate(filterId="2plusCopyFL1",.gate=gm.6)
 
 #Look at the gating on the controls
 ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
+
+
+##Check how the gates look on all the samples
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
+
+
 
 ##Check how the gates look on all the samples
 ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
