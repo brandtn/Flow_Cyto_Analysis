@@ -32,10 +32,8 @@ library(ggcyto)
 
 
 #Read in the data
-
 #Set working directory to the folder in which you have stored your .fcs files
 #Read in all the fcs files in the directory.
-
 
 #working directory
 dir = '.'
@@ -43,7 +41,6 @@ dir = '.'
 #file location
 path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
 #path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
-
 
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
 
@@ -57,7 +54,6 @@ sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 
 files <- paste(path.data,name,"/",sort(factor(list.files(paste(path.data,name,"/", sep=""),full.names=FALSE), levels = paste(sample.sheet$Well,".fcs",sep="" ), ordered=TRUE)),sep="")
 flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
-
 
 
 
@@ -84,28 +80,6 @@ gateData <- flowData
 zerocopy <- 1
 onecopy <- 2
 twocopy <- 3
-
-
-#Sampel Check
-ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6)
-ggcyto(flowData, aes(`FL1.A`)) + geom_density() + xlim(0,1e6)
-ggplot(flowData, aes(name,FL1.A/FSC.A)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
-  stat_boxplot(geom ='errorbar', colour = "lightgreen") +
-  geom_boxplot(outlier.shape = NA, colour = "lightgreen") +
-  scale_y_log10()+
-  scale_x_discrete(labels=pData(flowData)$name)
-
-
-ggcyto(flowData[c(1,9,13)], aes(`FL1.A`)) + geom_density() + xlim(0,5e5)
-ggplot(flowData[c(1,9,13)], aes(name,FL1.A/FSC.A)) +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
-  stat_boxplot(geom ='errorbar', colour = "lightgreen") +
-  geom_boxplot(outlier.shape = NA, colour = "lightgreen") +
-  scale_y_log10()+
-  scale_x_discrete(labels=pData(flowData)$name)
 
 ##############################
 #1. Generate gate for singlet cells####
@@ -205,8 +179,6 @@ fl1gate.2 <- polygonGate(filterId="twoCopyFL1",.gate=gm.5)
 
 ##Overlay and check the new gate
 ggcyto(gateData[twocopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2)
-
-
 
 
 ##Plot the control sample that has 2 copies and draw a new gate for more then 2 copies
