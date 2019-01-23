@@ -75,13 +75,17 @@ Variables for the user to set can be found in chunk one. These include both requ
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
 
 
+
 #fcs run sample name
-name <- list.folders[17]
+name <- list.folders[1]
+
+#date of gate to use
+date <- "2019-01-23"
 
 #fcs data to extract
 extract.FSC_A <- "Yes"
@@ -100,7 +104,7 @@ extract.Width <- "No"
 extract.Time  <- "No"
 
 #samplesheet parameters
-sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA)
+sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA, POPULATION = NA, TIMEPOINT= NA)
 
 #style of output
 #Proportional Data
@@ -116,7 +120,9 @@ save.df <- "Yes"
 file.df <- paste(name,"_df_",Sys.Date(),sep="")
 #DataFrame - Experiment Statistics
 save.stats <- "Yes"
-file.stats <- paste(name,"stats",Sys.Date(),".csv",sep="")
+file.stats <- paste(name,"_stats_",Sys.Date(),".csv",sep="")
+#Append
+add.data <- "No"
 
 ```
 
@@ -142,12 +148,7 @@ sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 files <- paste(path.data,name,"/",sort(factor(list.files(paste(path.data,name,"/", sep=""),full.names=FALSE), levels = paste(sample.sheet$Well,".fcs",sep="" ), ordered=TRUE)),sep="")
 flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
-#files<-list.files(paste(path.data,name,"/", sep=""),full.names=TRUE)
-#flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
-
-#sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
-#sample.sheet <- sample.sheet[order(sample.sheet$Well),]
 
 
 #Adds a sample sheet data to the pData of the flowset
@@ -155,16 +156,20 @@ flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_",sample.sheet$Well), sep="")
 
 #Need to determine samplesheet inputs
+pData(flowData)$name <- sampleNames(flowData)
 pData(flowData)$Well <- sample.sheet$Well
 pData(flowData)$Strain <- sample.sheet$Strain
 pData(flowData)$Genotype <- sample.sheet$Genotype
 pData(flowData)$Ploidy <- sample.sheet$Ploidy
 pData(flowData)$Media <- sample.sheet$Media
 pData(flowData)$Experiment <- sample.sheet$Experiment
+pData(flowData)$Population <- sample.sheet$Population
+pData(flowData)$Timepoint <- sample.sheet$Timepoint
 
 
 #Load Gates
-load(file = "gates_2019-01-13.RData")
+#load(file = "LTEE_mCitrine_GAP1_Variants_T00_gates_2019-01-23.RData")
+load(file = paste(name,"_gates_",date,".Rdata",sep=""))
 
 ```
 
@@ -201,6 +206,13 @@ flone.neg <- Subset(filteredData, fl1gate.0)
 flone.neg.cells <- fsApply(flone.neg, each_col, length)[1:samples.num]
 print(flone.neg.cells)
 
+
+####FOR CONATIMATED RUNS ONLY#####
+#this gate removes non floruescent readings from samples
+flone.all <-  Subset(filteredData, !fl1gate.0)
+flone.all.cells <- fsApply(flone.all, each_col, length)[1:samples.num]
+print(flone.all.cells)
+
 #this gate defines 1-copy flouresecent cells
 flone.one <- Subset(filteredData, fl1gate.1) 
 flone.one.cells <- fsApply(flone.one, each_col, length)[1:samples.num]
@@ -217,6 +229,8 @@ flone.three.cells <- fsApply(flone.three, each_col, length)[1:samples.num]
 print(flone.three.cells)
 
 ```
+
+
 
 ** Quality control **
 
@@ -280,6 +294,7 @@ xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T,
 
 ```{r Data extraction}
 #Transfer data into a dataframe
+##### Updated to deal with contamination ######
 
 #Move filtered data into a dataframe
 filtered.data <- sample.param
@@ -298,30 +313,50 @@ if(extract.FL4_H == "Yes"){filtered.data<-cbind(filtered.data, FL4.H=NA)}
 if(extract.Width == "Yes"){filtered.data<-cbind(filtered.data, Width=NA)}
 if(extract.Time == "Yes"){filtered.data<-cbind(filtered.data, Time=NA)}
 
-for(i in 1:length(filteredData)){
-  sample <- sampleNames(filteredData)[i]
-  well <- as.character(pData(filteredData)$Well[i])
-  strain <- as.character(pData(filteredData)$Strain[i])
-  genotype <- as.character(pData(filteredData)$Genotype[i])
-  ploidy <- as.character(pData(filteredData)$Ploidy[i])
-  media <- as.character(pData(filteredData)$Media[i])
-  exp <- as.character(pData(filteredData)$Experiment[i])
-  if(extract.FSC_A == "Yes"){fsc.a <- exprs(filteredData[[i,1]])}
-  if(extract.SSC_A == "Yes"){ssc.a <- exprs(filteredData[[i,2]])}
-  if(extract.FL1_A == "Yes"){fl1.a <- exprs(filteredData[[i,3]])}
-  if(extract.FL2_A == "Yes"){fl2.a <- exprs(filteredData[[i,4]])}
-  if(extract.FL3_A == "Yes"){fl3.a <- exprs(filteredData[[i,5]])}
-  if(extract.FL4_A == "Yes"){fl4.a <- exprs(filteredData[[i,6]])}
-  if(extract.FSC_H == "Yes"){fsc.h <- exprs(filteredData[[i,7]])}
-  if(extract.SSC_H == "Yes"){ssc.h <- exprs(filteredData[[i,8]])}
-  if(extract.FL1_H == "Yes"){fl1.h <- exprs(filteredData[[i,9]])}
-  if(extract.FL2_H == "Yes"){fl2.h <- exprs(filteredData[[i,10]])}
-  if(extract.FL3_H == "Yes"){fl3.h <- exprs(filteredData[[i,11]])}
-  if(extract.FL4_H == "Yes"){fl4.h <- exprs(filteredData[[i,12]])}
-  if(extract.Width == "Yes"){width <- exprs(filteredData[[i,11]])}
-  if(extract.Time == "Yes"){time <- exprs(filteredData[[i,12]])}
+for(i in 1:length(flowData)){
+  sample <- sampleNames(flowData)[i]
+  well <- as.character(pData(flowData)$Well[i])
+  strain <- as.character(pData(flowData)$Strain[i])
+  genotype <- as.character(pData(flowData)$Genotype[i])
+  ploidy <- as.character(pData(flowData)$Ploidy[i])
+  media <- as.character(pData(flowData)$Media[i])
+  exp <- as.character(pData(flowData)$Experiment[i])
+  pop <- as.character(pData(flowData)$Population[i])
+  time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
 
-  filtered.data <- rbind(filtered.data, cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp,
+  if(pData(flowData[i])$Population == '0_Copy_Control') {
+    if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.neg[[i,1]])}
+    if(extract.SSC_A == "Yes"){ssc.a <- exprs(flone.neg[[i,2]])}
+    if(extract.FL1_A == "Yes"){fl1.a <- exprs(flone.neg[[i,3]])}
+    if(extract.FL2_A == "Yes"){fl2.a <- exprs(flone.neg[[i,4]])}
+    if(extract.FL3_A == "Yes"){fl3.a <- exprs(flone.neg[[i,5]])}
+    if(extract.FL4_A == "Yes"){fl4.a <- exprs(flone.neg[[i,6]])}
+    if(extract.FSC_H == "Yes"){fsc.h <- exprs(flone.neg[[i,7]])}
+    if(extract.SSC_H == "Yes"){ssc.h <- exprs(flone.neg[[i,8]])}
+    if(extract.FL1_H == "Yes"){fl1.h <- exprs(flone.neg[[i,9]])}
+    if(extract.FL2_H == "Yes"){fl2.h <- exprs(flone.neg[[i,10]])}
+    if(extract.FL3_H == "Yes"){fl3.h <- exprs(flone.neg[[i,11]])}
+    if(extract.FL4_H == "Yes"){fl4.h <- exprs(flone.neg[[i,12]])}
+    if(extract.Width == "Yes"){width <- exprs(flone.neg[[i,11]])}
+    if(extract.Time == "Yes"){time <- exprs(flone.neg[[i,12]])}
+  } else {
+    if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.all[[i,1]])}
+    if(extract.SSC_A == "Yes"){ssc.a <- exprs(flone.all[[i,2]])}
+    if(extract.FL1_A == "Yes"){fl1.a <- exprs(flone.all[[i,3]])}
+    if(extract.FL2_A == "Yes"){fl2.a <- exprs(flone.all[[i,4]])}
+    if(extract.FL3_A == "Yes"){fl3.a <- exprs(flone.all[[i,5]])}
+    if(extract.FL4_A == "Yes"){fl4.a <- exprs(flone.all[[i,6]])}
+    if(extract.FSC_H == "Yes"){fsc.h <- exprs(flone.all[[i,7]])}
+    if(extract.SSC_H == "Yes"){ssc.h <- exprs(flone.all[[i,8]])}
+    if(extract.FL1_H == "Yes"){fl1.h <- exprs(flone.all[[i,9]])}
+    if(extract.FL2_H == "Yes"){fl2.h <- exprs(flone.all[[i,10]])}
+    if(extract.FL3_H == "Yes"){fl3.h <- exprs(flone.all[[i,11]])}
+    if(extract.FL4_H == "Yes"){fl4.h <- exprs(flone.all[[i,12]])}
+    if(extract.Width == "Yes"){width <- exprs(flone.all[[i,11]])}
+    if(extract.Time == "Yes"){time <- exprs(flone.all[[i,12]])}
+  }
+  
+  filtered.data <- rbind(filtered.data, cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp, POPULATION = pop, TIMEPOINT= time,
                     if(extract.FSC_A == "Yes"){FSC.A=fsc.a},
                     if(extract.SSC_A == "Yes"){SSC.A=ssc.a},
                     if(extract.FL1_A == "Yes"){FL1.A=fl1.a},
@@ -360,30 +395,49 @@ for(i in 1:length(filteredData)){
 
 stats.data <- cbind(sample.param,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL1_MEDIAN=NA,FL1_MEAN=NA,FL1_SD=NA,NORMALIZED_GFP_MEDIAN=NA,NORMALIZED_GFP_MEAN=NA,NORMALIZED_GFP_SD=NA)
 
- for(i in 1:length(filteredData)){
-  sample <- sampleNames(filteredData)[i]
-  well <- as.character(pData(filteredData)$Well[i])
-  strain <- as.character(pData(filteredData)$Strain[i])
-  genotype <- as.character(pData(filteredData)$Genotype[i])
-  ploidy <- as.character(pData(filteredData)$Ploidy[i])
-  media <- as.character(pData(filteredData)$Media[i])
-  exp <- as.character(pData(filteredData)$Experiment[i])
-  if(extract.FSC_A == "Yes"){fsc.a <- exprs(filteredData[[i,1]])}
-  if(extract.SSC_A == "Yes"){ssc.a <- exprs(filteredData[[i,2]])}
-  if(extract.FL1_A == "Yes"){fl1.a <- exprs(filteredData[[i,3]])}
-  if(extract.FL2_A == "Yes"){fl2.a <- exprs(filteredData[[i,4]])}
-  if(extract.FL3_A == "Yes"){fl3.a <- exprs(filteredData[[i,5]])}
-  if(extract.FL4_A == "Yes"){fl4.a <- exprs(filteredData[[i,6]])}
-  if(extract.FSC_H == "Yes"){fsc.h <- exprs(filteredData[[i,7]])}
-  if(extract.SSC_H == "Yes"){ssc.h <- exprs(filteredData[[i,8]])}
-  if(extract.FL1_H == "Yes"){fl1.h <- exprs(filteredData[[i,9]])}
-  if(extract.FL2_H == "Yes"){fl2.h <- exprs(filteredData[[i,10]])}
-  if(extract.FL3_H == "Yes"){fl3.h <- exprs(filteredData[[i,11]])}
-  if(extract.FL4_H == "Yes"){fl4.h <- exprs(filteredData[[i,12]])}
-  if(extract.Width == "Yes"){width <- exprs(filteredData[[i,11]])}
-  if(extract.Time == "Yes"){time <- exprs(filteredData[[i,12]])}
+ for(i in 1:length(flowData)){
+  sample <- sampleNames(flowData)[i]
+  well <- as.character(pData(flowData)$Well[i])
+  strain <- as.character(pData(flowData)$Strain[i])
+  genotype <- as.character(pData(flowData)$Genotype[i])
+  ploidy <- as.character(pData(flowData)$Ploidy[i])
+  media <- as.character(pData(flowData)$Media[i])
+  exp <- as.character(pData(flowData)$Experiment[i])
+  pop <- as.character(pData(flowData)$Population[i])
+  time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
+  if(pData(flowData[i])$Population == '0_Copy_Control') {
+    if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.neg[[i,1]])}
+    if(extract.SSC_A == "Yes"){ssc.a <- exprs(flone.neg[[i,2]])}
+    if(extract.FL1_A == "Yes"){fl1.a <- exprs(flone.neg[[i,3]])}
+    if(extract.FL2_A == "Yes"){fl2.a <- exprs(flone.neg[[i,4]])}
+    if(extract.FL3_A == "Yes"){fl3.a <- exprs(flone.neg[[i,5]])}
+    if(extract.FL4_A == "Yes"){fl4.a <- exprs(flone.neg[[i,6]])}
+    if(extract.FSC_H == "Yes"){fsc.h <- exprs(flone.neg[[i,7]])}
+    if(extract.SSC_H == "Yes"){ssc.h <- exprs(flone.neg[[i,8]])}
+    if(extract.FL1_H == "Yes"){fl1.h <- exprs(flone.neg[[i,9]])}
+    if(extract.FL2_H == "Yes"){fl2.h <- exprs(flone.neg[[i,10]])}
+    if(extract.FL3_H == "Yes"){fl3.h <- exprs(flone.neg[[i,11]])}
+    if(extract.FL4_H == "Yes"){fl4.h <- exprs(flone.neg[[i,12]])}
+    if(extract.Width == "Yes"){width <- exprs(flone.neg[[i,11]])}
+    if(extract.Time == "Yes"){time <- exprs(flone.neg[[i,12]])}
+  } else {
+    if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.all[[i,1]])}
+    if(extract.SSC_A == "Yes"){ssc.a <- exprs(flone.all[[i,2]])}
+    if(extract.FL1_A == "Yes"){fl1.a <- exprs(flone.all[[i,3]])}
+    if(extract.FL2_A == "Yes"){fl2.a <- exprs(flone.all[[i,4]])}
+    if(extract.FL3_A == "Yes"){fl3.a <- exprs(flone.all[[i,5]])}
+    if(extract.FL4_A == "Yes"){fl4.a <- exprs(flone.all[[i,6]])}
+    if(extract.FSC_H == "Yes"){fsc.h <- exprs(flone.all[[i,7]])}
+    if(extract.SSC_H == "Yes"){ssc.h <- exprs(flone.all[[i,8]])}
+    if(extract.FL1_H == "Yes"){fl1.h <- exprs(flone.all[[i,9]])}
+    if(extract.FL2_H == "Yes"){fl2.h <- exprs(flone.all[[i,10]])}
+    if(extract.FL3_H == "Yes"){fl3.h <- exprs(flone.all[[i,11]])}
+    if(extract.FL4_H == "Yes"){fl4.h <- exprs(flone.all[[i,12]])}
+    if(extract.Width == "Yes"){width <- exprs(flone.all[[i,11]])}
+    if(extract.Time == "Yes"){time <- exprs(flone.all[[i,12]])}
+  }
  
-  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
+  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp,POPULATION= pop,TIMEPOINT=time,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
 }  
 
 stats.data<-stats.data[2:nrow(stats.data),]
@@ -534,18 +588,23 @@ colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", 
 
 
 #Save the current dataframe
-if(save.prop == "Yes"){write.table(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, quote=F, sep=",")}
+if(save.prop == "Yes"){write.table(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
 ```
 
 
 ** Saving Data **
 ```{r Saves Data}
-
+#Not able to append yet
 if(save.flowset == "Yes"){write.flowSet(flowData, folder.flowset)}
 
-if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}
+if (add.data == "Yes"){
+# load(savedFile, new.env())
+#    df = rbind(df, newRow)
+#    save(df, file = savedFile)
+}
+else {if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}}
 
-if(save.stats== "Yes"){write.table(paste(stats.data, file= file.stats, row.names=TRUE, quote=F, sep=",")}
+if(save.stats== "Yes"){write.table(stats.data, file= file.stats, row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
 
 ```
 

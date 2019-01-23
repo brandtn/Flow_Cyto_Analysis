@@ -29,6 +29,7 @@
 library(flowCore)
 library(flowViz)
 library(ggcyto)
+library(ggforce)
 
 
 #Read in the data
@@ -44,7 +45,8 @@ path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
 
 
 #set name of run to create gates for
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18")
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+
 name <- list.folders[1]
 
 #load sample sheet
@@ -60,8 +62,8 @@ sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_"
 
 #set copy number controls
 zerocopy <- 1
-onecopy <- 2
-twocopy <- 3
+onecopy <- 3
+twocopy <- 4
 
 ##############################
 #1. Generate gate for singlet cells####
@@ -69,6 +71,7 @@ twocopy <- 3
 #******Please note you may need to adjust the x and y plot limits to properly visualize your data
 
 plot(flowData[[zerocopy]], c('FSC.H','FSC.A'), xlim=c(0,3e6), ylim=c(0,3e6),smooth=T)
+
 
 singlet.gate <- locator(100, type='l', col='red')
 gm.1 <- matrix(,length(singlet.gate$x),2)
@@ -80,10 +83,17 @@ pg.singlets <- polygonGate(filterId="singlets",.gate=gm.1)
 ggcyto(flowData[zerocopy], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + geom_gate(pg.singlets)
 
 #Look at the gating on the controls
-ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
+ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
 
 #test that the singlet gate looks reasonable for All samples
-ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 2)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 3)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 4)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 5)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 6)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 7)
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 8)
 
 ##############################
 #2. Generate Gate for debris based on forward scatter and side scatter. ####
@@ -101,11 +111,18 @@ gm.2[,2] <- debris.gate$y
 pg.nondebris <- polygonGate(filterId="nonDebris",.gate=gm.2)
 
 #Look at the gating on the controls
-ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris)
+ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
 
 
 #test that the singlet gate looks reasonable for All samples
-ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 2)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 3)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 4)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 5)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 6)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 7)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,1e6) + geom_gate(pg.nondebris) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 8)
 
 
 #############################
@@ -127,11 +144,20 @@ gm.3[,2] <- zero.gate$y
 fl1gate.0 <- polygonGate(filterId="zeroFL1",.gate=gm.3)
 
 #Look at the gating on the controls
-ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0)
+ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
 
-ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 2)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 3)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 4)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 5)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 6)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 7)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,5e4) + geom_gate(fl1gate.0) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 8)
+
 
 ##Draw a new gate for the one copy include the gate for zero copies
+
 plot(flowData[[onecopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,5e5),smooth=T)
 polygon(zero.gate)
 
@@ -143,7 +169,10 @@ gm.4[,2] <- one.gate$y
 fl1gate.1 <- polygonGate(filterId="oneCopyFL1",.gate=gm.4)
 
 ##Overlay and check the new gate
-ggcyto(flowData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
+ggcyto(flowData[onecopy], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
+
+
+ggcyto(flowData[c(onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  geom_gate(fl1gate.0) + geom_gate(fl1gate.1)
 
 ##Plot the control sample that has 2 copies along with the one and zero copy gates and draw a new gate for two copy
 plot(flowData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,2e6), ylim=c(0,5e5),smooth=T)
@@ -166,12 +195,6 @@ polygon(zero.gate)
 polygon(one.gate)
 polygon(two.gate)
 
-##Plot the control sample that has 2 copies along with the two, one, and zero copy gates and draw a new gate for more then 2 copies
-plot(flowData[[twocopy]], c('FSC.A','FL1.A'), xlim=c(0,3e6), ylim=c(0,1e6), smooth=T)
-polygon(zero.gate)
-polygon(one.gate)
-polygon(two.gate)
-
 three.gate <- locator(10, type='l', col='purple')
 gm.6 <- matrix(,length(three.gate$x),2)
 colnames(gm.6) <- c('FSC.A','FL1.A')
@@ -180,16 +203,19 @@ gm.6[,2] <- three.gate$y
 fl1gate.3 <- polygonGate(filterId="2plusCopyFL1",.gate=gm.6)
 
 #Look at the gating on the controls
-ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
+ggcyto(flowData[c(zerocopy,onecopy,twocopy)], aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
 
 
 ##Check how the gates look on all the samples
-ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 1)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 2)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 3)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 4)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 5)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 6)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 7)
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3) + facet_wrap_paginate(~name, ncol = 2, nrow = 2, page = 8)
 
-
-
-##Check how the gates look on all the samples
-ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) + xlim(0,3e6) + ylim(0,3e6) + geom_gate(fl1gate.0) + geom_gate(fl1gate.1) + geom_gate(fl1gate.2) + geom_gate(fl1gate.3)
 
 #Save the gate information to an R data file
 rm(list=c("flowData")) 
