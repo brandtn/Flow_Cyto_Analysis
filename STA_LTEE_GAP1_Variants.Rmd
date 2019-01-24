@@ -1,8 +1,10 @@
 ---
 title: "Gresham Lab Floww Cytometry Single Timepoint Analysis"
-author: 'G. Avecilla, N. Brandt, S. Lauer, F. Abdul-Rahman, D. Gresham'
-date: '`r Sys.Date()`'
-output: html_notebook
+author: "G. Avecilla, N. Brandt, S. Lauer, F. Abdul-Rahman, D. Gresham"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
 ---
 
 This notebook contains the code necessary to analysis flow cytometry data in the Gresham Lab. 
@@ -75,14 +77,14 @@ Variables for the user to set can be found in chunk one. These include both requ
 dir = '.'
 
 #file location
-path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+#list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
 
 
 
 #fcs run sample name
-name <- list.folders[1]
+#name <- list.folders[1]
 
 #date of gate to use
 date <- "2019-01-23"
@@ -104,7 +106,7 @@ extract.Width <- "No"
 extract.Time  <- "No"
 
 #samplesheet parameters
-sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA, POPULATION = NA, TIMEPOINT= NA)
+sample.param <- data.frame(SAMPLE=NA, WELL=NA, STRAIN=NA, GENOTYPE=NA, PLOIDY=NA, MEDIA=NA, EXPERIMENT=NA, POPULATION = NA, TIMEPOINT= NA, VESSEL = NA)
 
 #style of output
 #Proportional Data
@@ -114,7 +116,7 @@ file.prop <- paste(name,"_prop_",Sys.Date(),sep="")
 #FlowSet
 save.flowset <- "No"
 #filename
-folder.flowset <- paste(name,"flowdata",Sys.Date(),sep="")
+folder.flowset <- paste(name,"_flowdata_",Sys.Date(),sep="")
 #DataFrame - Individual data points
 save.df <- "Yes"
 file.df <- paste(name,"_df_",Sys.Date(),sep="")
@@ -165,11 +167,12 @@ pData(flowData)$Media <- sample.sheet$Media
 pData(flowData)$Experiment <- sample.sheet$Experiment
 pData(flowData)$Population <- sample.sheet$Population
 pData(flowData)$Timepoint <- sample.sheet$Timepoint
+pData(flowData)$Vessel <- sample.sheet$Vessel
 
 
 #Load Gates
 #load(file = "LTEE_mCitrine_GAP1_Variants_T00_gates_2019-01-23.RData")
-load(file = paste(name,"_gates_",date,".Rdata",sep=""))
+load(file = paste(path.data,name,"_gates_",date,".Rdata",sep=""))
 
 ```
 
@@ -235,7 +238,7 @@ print(flone.three.cells)
 ** Quality control **
 
 ##Gates
-```{r}
+```{r eval=FALSE}
 
 #Singlets gate
 xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
@@ -258,7 +261,7 @@ xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.
 ```
 
 ##Data transformation for visualization
-```{r}
+```{r eval=FALSE}
 #In order to look at QC plots the data is transformed using the logicle transform, which is a log transform for high values that transitions to a linear transformation near zero values 
 
 #This is simply for visualization purposes
@@ -272,19 +275,19 @@ dataLGCLTransform <- transform(filteredData, 'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =l
 ```
 
 ##Effect of time
-```{r}
+```{r eval=FALSE}
 #The effect of time on signal (of which there shouldn't be any)
 
 xyplot(FL1.A ~ Time, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredData))
 ```
 
 ##Plots of FL1 versus FSC
-```{r}
+```{r eval=FALSE}
 xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredData))
 ```
 
 ##Plots of FSC versus SSC
-```{r}
+```{r eval=FALSE}
 xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredData))
 ```
 
@@ -323,6 +326,7 @@ for(i in 1:length(flowData)){
   exp <- as.character(pData(flowData)$Experiment[i])
   pop <- as.character(pData(flowData)$Population[i])
   time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
+  ves <- as.character(pData(flowData)$Vessel[i])
 
   if(pData(flowData[i])$Population == '0_Copy_Control') {
     if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.neg[[i,1]])}
@@ -356,7 +360,7 @@ for(i in 1:length(flowData)){
     if(extract.Time == "Yes"){time <- exprs(flone.all[[i,12]])}
   }
   
-  filtered.data <- rbind(filtered.data, cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp, POPULATION = pop, TIMEPOINT= time,
+  filtered.data <- rbind(filtered.data, cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp, POPULATION = pop, TIMEPOINT= time, VESSEL = ves,
                     if(extract.FSC_A == "Yes"){FSC.A=fsc.a},
                     if(extract.SSC_A == "Yes"){SSC.A=ssc.a},
                     if(extract.FL1_A == "Yes"){FL1.A=fl1.a},
@@ -405,6 +409,9 @@ stats.data <- cbind(sample.param,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL
   exp <- as.character(pData(flowData)$Experiment[i])
   pop <- as.character(pData(flowData)$Population[i])
   time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
+  ves <- as.character(pData(flowData)$Vessel[i])
+
+  
   if(pData(flowData[i])$Population == '0_Copy_Control') {
     if(extract.FSC_A == "Yes"){fsc.a <- exprs(flone.neg[[i,1]])}
     if(extract.SSC_A == "Yes"){ssc.a <- exprs(flone.neg[[i,2]])}
@@ -437,7 +444,7 @@ stats.data <- cbind(sample.param,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL
     if(extract.Time == "Yes"){time <- exprs(flone.all[[i,12]])}
   }
  
-  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp,POPULATION= pop,TIMEPOINT=time,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
+  stats.data<-(rbind(stats.data,cbind(SAMPLE=sample,WELL=well,STRAIN=strain,GENOTYPE=genotype,PLOIDY=ploidy,MEDIA=media,EXPERIMENT=exp,POPULATION= pop,TIMEPOINT=time,VESSEL=ves,COUNT=length(fsc.a),FSC_MEDIAN=median(fsc.a),FSC_MEAN=mean(fsc.a),FSC_SD=sd(fsc.a),FL1_MEDIAN=median(fl1.a),FL1_MEAN=mean(fl1.a),FL1_SD=sd(fl1.a),NORMALIZED_GFP_MEDIAN=median(fl1.a/fsc.a),NORMALIZED_GFP_MEAN=mean(fl1.a/fsc.a),NORMALIZED_GFP_SD=sd(fl1.a/fsc.a))))
 }  
 
 stats.data<-stats.data[2:nrow(stats.data),]
@@ -588,23 +595,25 @@ colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", 
 
 
 #Save the current dataframe
-if(save.prop == "Yes"){write.table(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
+if(save.prop == "Yes"){write.csv(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, quote=F)}
 ```
 
 
 ** Saving Data **
 ```{r Saves Data}
 #Not able to append yet
-if(save.flowset == "Yes"){write.flowSet(flowData, folder.flowset)}
+if(save.flowset == "Yes"){write.flowSet(filteredData, folder.flowset)}
 
-if (add.data == "Yes"){
+#if (add.data == "Yes"){
 # load(savedFile, new.env())
 #    df = rbind(df, newRow)
 #    save(df, file = savedFile)
-}
-else {if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}}
+#}
+#else {
+  if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}
+ # }
 
-if(save.stats== "Yes"){write.table(stats.data, file= file.stats, row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
+if(save.stats== "Yes"){write.csv(stats.data, file= file.stats, row.names=TRUE, quote=F)}
 
 ```
 
