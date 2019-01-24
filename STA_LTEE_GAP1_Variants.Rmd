@@ -62,6 +62,7 @@ requireInstall <- function(packageName,isBioconductor=F) {
 
 #Load libraries
 requireInstall("openCyto",isBioconductor=T)
+requireInstall("ggcyto",isBioconductor=T)
 requireInstall("tidyverse")
 ```
 
@@ -120,9 +121,7 @@ save.df <- "Yes"
 file.df <- paste(name,"_df_",Sys.Date(),sep="")
 #DataFrame - Experiment Statistics
 save.stats <- "Yes"
-file.stats <- paste(name,"_stats_",Sys.Date(),".csv",sep="")
-#Append
-add.data <- "No"
+file.stats <- paste(name,"_stats_",Sys.Date(),sep="")
 
 ```
 
@@ -169,7 +168,7 @@ pData(flowData)$Timepoint <- sample.sheet$Timepoint
 
 #Load Gates
 #load(file = "LTEE_mCitrine_GAP1_Variants_T00_gates_2019-01-23.RData")
-load(file = paste(name,"_gates_",date,".Rdata",sep=""))
+load(file = paste(path.data,name,"_gates_",date,".Rdata",sep=""))
 
 ```
 
@@ -233,34 +232,36 @@ print(flone.three.cells)
 
 
 ** Quality control **
+#Note that you may need to adjust the axis, the bin size, and the number cols and rows, and the number of fluorescent gates in order to produce the best visulatization for your data
 
 ##Gates
 ```{r}
 
 #Singlets gate
-xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
+ggcyto(flowData, aes(x = `FSC.H`, y =  `FSC.A`)) + geom_hex(bins = 512) +  xlim(0,3e6) + ylim(0,3e6) + geom_gate(pg.singlets) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - singlets gate")
 
 #Debris gate
-xyplot(SSC.A ~ FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,3e6), ylim=c(0,3e5), filter=pg.nondebris, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - nondebris gate")
+
+ggcyto(flowData, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) +  xlim(0,2e6) + ylim(0,5e5) + geom_gate(pg.nondebris) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - nondebris gate")
 
 #Non-fluorescent population gate
-xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.0, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - non GFP gate")
+
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  xlim(0,1e6) + ylim(0,3e5) + geom_gate(fl1gate.0) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - non GFP gate")
 
 #1 copy Fluorescent population gate
-xyplot(FL1.A~FSC.A, data=flowData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.1, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - GFP gate")
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  xlim(0,1e6) + ylim(0,3e5) + geom_gate(fl1gate.1) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - GFP gate")
 
 #2 copy fluorescing gate
-xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.2, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - high GFP gate")
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  xlim(0,1e6) + ylim(0,3e5) + geom_gate(fl1gate.2) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - high GFP gate")
 
 #3+ copy fluorescing gate
-xyplot(FL1.A~FSC.A, data=flowData, xlim=c(0,5e6), ylim=c(0,5e4), filter=fl1gate.3, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "First flowset - high GFP gate")
+ggcyto(flowData, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  xlim(0,1e6) + ylim(0,3e5) + geom_gate(fl1gate.3) + facet_wrap(~name, ncol = 8, nrow = 4) + ggtitle("First flowset - high GFP gate")
 
 ```
 
 ##Data transformation for visualization
 ```{r}
-#In order to look at QC plots the data is transformed using the logicle transform, which is a log transform for high values that transitions to a linear transformation near zero values 
-
+#In order to look at QC plots the data is transformed using the logicle transform, which is a log transform for high values that transitions to a linear transformation near zero values
 #This is simply for visualization purposes
 
 lgcl <- logicleTransform(w = 0.5, t= 10000, m=4.5) #the parameters w,t, and m define the transformation parameters
@@ -268,24 +269,22 @@ lgcl <- logicleTransform(w = 0.5, t= 10000, m=4.5) #the parameters w,t, and m de
 #Dataset 1 tranformation applied to every channel except width and time
 dataLGCLTransform <- transform(filteredData, 'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
 
-
 ```
 
 ##Effect of time
 ```{r}
 #The effect of time on signal (of which there shouldn't be any)
-
-xyplot(FL1.A ~ Time, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredData))
+ggcyto(dataLGCLTransform, aes(x = `Time`, y =  `FL1.A`)) + geom_hex(bins = 128) +  xlim(150,250) + ylim(0,8)+facet_wrap(~name, ncol = 8, nrow = 4)
 ```
 
 ##Plots of FL1 versus FSC
 ```{r}
-xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredData))
+ggcyto(dataLGCLTransform, aes(x = `FSC.A`, y =  `FL1.A`)) + geom_hex(bins = 512) +  xlim(4,8) + ylim(2,6) + facet_wrap(~name, ncol = 8, nrow = 4)
 ```
 
 ##Plots of FSC versus SSC
 ```{r}
-xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform, smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredData))
+ggcyto(dataLGCLTransform, aes(x = `FSC.A`, y =  `SSC.A`)) + geom_hex(bins = 512) +  xlim(4,8) + ylim(4,8)+facet_wrap(~name, ncol = 8, nrow = 4)
 ```
 
 
@@ -569,43 +568,40 @@ ggplot(stats.data,aes(x=SAMPLE, y = flone.one.cells/non.debris)) +
 #Need to fix variable names for the following Population compenstation, make more generic and or move to a LTEE specific pipeline
 
 ##Population composition
+#Currently Designed for LTEE experiments
 ```{r}
+
+PopProportion_zeroGFP <- flone.neg.cells/non.debris
+PopProportion_oneGFP <- flone.one.cells/non.debris
+PopProportion_twoGFP <- flone.two.cells/non.debris
+PopProportion_threeGFP <- flone.three.cells/non.debris
+prop.data <- cbind(stats.data, PopProportion_zeroGFP, PopProportion_oneGFP, PopProportion_twoGFP, PopProportion_threeGFP, non.debris)
+colnames(prop.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "CELL COUNT")
+
+
+ggplot(prop.data,aes(x=SAMPLE, y = PopProportion_zeroGFP)) +
+  geom_col() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+  scale_x_discrete(labels=stats.data$SAMPLE)+
+  ylab("Proportion cells with Flourescense")
+
+
 pop.composition <- rbind(flone.neg.cells/non.debris,flone.one.cells/non.debris,flone.two.cells/non.debris, flone.three.cells/non.debris)
 barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowData),1,11))
 
 
 ```
 
-##Extract data for further processing
-```{r Extract data for further processing}
-
-PopProportion_zeroGFP <- flone.neg.cells/non.debris
-PopProportion_oneGFP <- flone.one.cells/non.debris
-PopProportion_twoGFP <- flone.two.cells/non.debris
-PopProportion_threeGFP <- flone.three.cells/non.debris
-all.data <- cbind(stats.data, PopProportion_zeroGFP, PopProportion_oneGFP, PopProportion_twoGFP, PopProportion_threeGFP, non.debris)
-colnames(all.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
-
-
-#Save the current dataframe
-if(save.prop == "Yes"){write.table(all.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
-```
-
-
 ** Saving Data **
 ```{r Saves Data}
-#Not able to append yet
 if(save.flowset == "Yes"){write.flowSet(flowData, folder.flowset)}
 
-if (add.data == "Yes"){
-# load(savedFile, new.env())
-#    df = rbind(df, newRow)
-#    save(df, file = savedFile)
-}
-else {if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}}
+if(save.df == "Yes"){save(filtered.data, file=paste(file.df,".Rdata",sep=""))}
 
-if(save.stats== "Yes"){write.table(stats.data, file= file.stats, row.names=TRUE, append=(add.data == "Yes"), quote=F, sep=",")}
+if(save.stats== "Yes"){write.csv(stats.data, file= paste(ffile.stats,".csv",sep=""), row.names=TRUE quote=F)}
 
+if(save.prop == "Yes"){write.csv(prop.data, file=paste(file.prop,".csv",sep=""), row.names=TRUE quote=F)}
 ```
 
 
