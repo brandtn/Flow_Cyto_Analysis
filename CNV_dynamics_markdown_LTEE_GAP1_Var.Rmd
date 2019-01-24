@@ -1,7 +1,7 @@
 ---
-title: "CNV dynamics"
-author: "Grace Avecilla ga824"
-date: "9/26/2017"
+title: "LTEE_CNV_Dynamics"
+author: "Nathan Brandt"
+date: "1/22/2019"
 output: html_document
 ---
 
@@ -31,38 +31,70 @@ library(ggjoy)
 dir = '.'
 
 #file location
-path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
-#list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", 
+                  "LTEE_mCitrine_GAP1_Variants_T06", 
+                  "LTEE_mCitrine_GAP1_Variants_T07", 
+                  "LTEE_mCitrine_GAP1_Variants_T08.3", 
+                  #"LTEE_mCitrine_GAP1_Variants_T11.1", 
+                  "LTEE_mCitrine_GAP1_Variants_T11.2", 
+                  #"LTEE_mCitrine_GAP1_Variants_T13.1", 
+                  "LTEE_mCitrine_GAP1_Variants_T13.2", 
+                  "LTEE_mCitrine_GAP1_Variants_T14", 
+                  "LTEE_mCitrine_GAP1_Variants_T15"#, 
+                  #"LTEE_mCitrine_GAP1_Variants_T18", 
+                  #"LTEE_mCitrine_GAP1_Variants_T22", 
+                  #"LTEE_mCitrine_GAP1_Variants_T25", 
+                  #"LTEE_mCitrine_GAP1_Variants_T27", 
+                  #"LTEE_mCitrine_GAP1_Variants_T29", 
+                  #"LTEE_mCitrine_GAP1_Variants_T34"
+                  )
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", 
+                  "LTEE_mCitrine_GAP1_Variants_T06", 
+                  "LTEE_mCitrine_GAP1_Variants_T07", 
+                  "LTEE_mCitrine_GAP1_Variants_T08.3", 
+                  "LTEE_mCitrine_GAP1_Variants_T11.2", 
+                  "LTEE_mCitrine_GAP1_Variants_T13.2", 
+                  "LTEE_mCitrine_GAP1_Variants_T14", 
+                  "LTEE_mCitrine_GAP1_Variants_T15")
 
 
-#timepoint <- c(0, 24, 28, 32, 44, 45, 52, 53, 56, 60, 72, 88, 100, 108, 116, 136)
+date <- "2019-01-24"
+```
 
-timepoint <- c(0, 24, 44, 72, 136)
+```{r} Load Data
 
-date <- '2019-01-13'
+alldata<-read_csv(paste(path.data,date,"/","All_Data_prop_2019-01-24.csv", sep=""))
 
-data <- read_csv(paste(path.data,list.folders[1],"_prop_",date,".csv", sep=""))
-data <- data %>% add_column(TIMEPOINT=timepoint[1]) %>% select(-SAMPLE)
+alldata$FL1_MEDIAN <- (alldata %>% filter(GENOTYPE=="Two copy control") %>% filter(TIMEPOINT==58.169464048643))$FL1_MEDIAN-90000
+
+```
+
+```{r} Read in  Data
+
+data <- read_csv(paste(path.data,date,"/",list.folders[1],"_prop_",date,".csv", sep=""))
 
 
 for(i in 2:length(list.folders)){
-  data.temp <- read_csv(paste(path.data,list.folders[i],"_prop_",date,".csv", sep=""))
-  
-  data<- bind_rows(data, data.temp %>% add_column(TIMEPOINT=timepoint[i]) %>% select(-SAMPLE))
+  data.temp <- read_csv(paste(path.data,date,"/",list.folders[i],"_prop_",date,".csv", sep=""))
+  data<- bind_rows(data, data.temp)
 }
 
+write.csv(data, file= "All_Data_prop_2019-01-24.csv", row.names=TRUE, quote=F)
+
+
 #Load data frame
-load(paste(path.data,list.folders[1],"_df_",date,".Rdata",sep=""))
-data2 <- cbind(filtered.data, TIMEPOINT=timepoint[1])
+load(paste(path.data,date,"/",list.folders[1],"_df_",date,".Rdata",sep=""))
+data2 <- filtered.data
 for(i in 2:length(list.folders)) {
-  load(paste(path.data,list.folders[i],"_df_",date,".Rdata",sep=""))
-  data2.temp <- cbind(filtered.data, TIMEPOINT=timepoint[i])
-  
+  load(paste(path.data,date,"/",list.folders[i],"_df_",date,".Rdata",sep=""))
+  data2.temp<-filtered.data
   data2 <- rbind(data2, data2.temp)
 }
+
+save(data2, file="All_Data_df_2019-01-24.Rdata")
 
 #Data located here:
 #alldata_unmasked <- read.csv("DataOut_11302018.csv")
@@ -76,29 +108,15 @@ for(i in 2:length(list.folders)) {
 
 
 ```{r Median fl1 over time}
+
+data$VESSEL <- as.factor(data$VESSEL)
+
 alldata <- data
 
-###PLOT NORMALIZED FLUOR###
-myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=GENOTYPE)) +
+#median  fluor#
+myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=VESSEL)) +
   geom_point() +
-  geom_line(aes(linetype=GENOTYPE), size=1.2) +
-  scale_y_continuous('Normalized fluorescence signal') +
-  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
-  scale_x_continuous("Generations") +
-  theme_classic() +
-  #scale_color_brewer(palette="Spectral", direction = 1) +
-  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
-  #facet_grid(Population ~ .) +
-  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
-  guides(colour = guide_legend(override.aes = list(size=2))) + 
-  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
-
-myplot #%+% subset(alldata, POPULATION %in% c("Genomic_Architecture_Mutant"))
-
-#median unnormalized fluor#
-myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=GENOTYPE)) +
-  geom_point() +
-  geom_line(aes(linetype=GENOTYPE), size=1.2) +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
   #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
   #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
   scale_x_continuous("Generations") +
@@ -112,7 +130,22 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=GENOTYPE)) +
 
 myplot #%+% subset(alldata, Nutrient %in% c("Glutamine"))
 ```
+###PLOT NORMALIZED FLUOR###
+#myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=POPULATION)) +
+  geom_point() +
+  geom_line(aes(linetype=POPULATION), size=1.2) +
+  scale_y_continuous('Normalized fluorescence signal') +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
+myplot #%+% subset(alldata, POPULATION %in% c("Genomic_Architecture_Mutant"))
 
 ```{r Proportion CNV cells}
 ###PLOT PROPORTION OF 2 copy CELLS###
@@ -230,9 +263,8 @@ theplot %+% subset(new, Nutrient %in% c("Glutamine")) +
 ```{r}
 #Load data.frame
 
-filtered.data$gens<-factor(data2$TIMEPOINT,levels=unique(data2$TIMEPOINT))
 
-ggplot(data2, aes(x = FL1.A/FSC.A, y = TIMEPOINT, fill = ..x.., height=..density..)) +
+ggplot(data2 %>% filter(VESSEL==5), aes(x = FL1.A, y = TIMEPOINT, fill = ..x.., height=..density..)) +
   geom_joy_gradient(scale = 1.25, rel_min_height = 0.02) +
   facet_grid(. ~ SAMPLE)
   scale_x_continuous("Normalized Fluorescence (a.u.)", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
