@@ -90,6 +90,9 @@ path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 #date of gate to use
 date <- "2019-01-23"
 
+#Evaluate QC
+qc <- "FALSE"
+
 #fcs data to extract
 extract.FSC_A <- "Yes"
 extract.SSC_A <- "Yes"
