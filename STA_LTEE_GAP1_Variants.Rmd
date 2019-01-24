@@ -575,8 +575,6 @@ ggplot(stats.data,aes(x=SAMPLE, y = flone.one.cells/non.debris)) +
 ```
 
 
-#Need to fix variable names for the following Population compenstation, make more generic and or move to a LTEE specific pipeline
-
 ##Population composition
 #Currently Designed for LTEE experiments
 ```{r}
@@ -588,16 +586,16 @@ PopProportion_threeGFP <- flone.three.cells/non.debris
 prop.data <- cbind(stats.data, PopProportion_zeroGFP, PopProportion_oneGFP, PopProportion_twoGFP, PopProportion_threeGFP, non.debris)
 colnames(prop.data) <- c(colnames(stats.data), "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "CELL COUNT")
 
-ggplot(prop.data,aes(x=SAMPLE, y = PopProportion_zeroGFP)) +
-  geom_col() +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
-  scale_x_discrete(labels=stats.data$SAMPLE)+
-  ylab("Proportion cells with Flourescense")
-
-
-pop.composition <- rbind(flone.neg.cells/non.debris,flone.one.cells/non.debris,flone.two.cells/non.debris, flone.three.cells/non.debris)
-barplot(pop.composition, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=str_sub(sampleNames(flowData),1,11))
+prop.data %>% 
+  select(SAMPLE,PopProp_3plus,PopProp_0copy,PopProp_1copy,PopProp_2copy) %>% 
+  gather(key="GFP_NUMBER",value="SIGNAL",-SAMPLE) %>%
+  ggplot(aes(fill=factor(GFP_NUMBER, levels = c("PopProp_3plus", "PopProp_2copy", "PopProp_1copy", "PopProp_0copy")), y=SIGNAL, x=SAMPLE)) +
+    geom_bar(stat="identity") +
+    scale_fill_manual(values=c("dark green","light green","grey","black")) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90,vjust=0.5,hjust = 1, size = 6)) +
+    ylab("Proportion cells with Flourescense") +
+    theme(legend.title=element_blank())
 
 ```
 
