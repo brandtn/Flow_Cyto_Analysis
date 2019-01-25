@@ -1,5 +1,5 @@
 #######################
-#gating_LTEE_Example.R       
+#gating_LTEE_GAP1_Variants.R       
 #
 #started: 01/07/2016
 #modified: 1/25/2019
