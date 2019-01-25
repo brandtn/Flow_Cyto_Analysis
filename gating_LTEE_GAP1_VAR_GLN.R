@@ -1,8 +1,8 @@
 #######################
-#gating.R       
+#gating_LTEE_Example.R       
 #
 #started: 01/07/2016
-#modified: 12/18/2018
+#modified: 1/25/2019
 #
 #author1: G Avecilla, S Lauer, D Gresham
 #author2: N Brandt
