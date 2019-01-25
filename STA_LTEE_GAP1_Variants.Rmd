@@ -78,20 +78,17 @@ Variables for the user to set can be found in chunk one. These include both requ
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
-#list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", "LTEE_mCitrine_GAP1_Variants_T06", "LTEE_mCitrine_GAP1_Variants_T07", "LTEE_mCitrine_GAP1_Variants_T08.1", "LTEE_mCitrine_GAP1_Variants_T08.3", "LTEE_mCitrine_GAP1_Variants_T11.1", "LTEE_mCitrine_GAP1_Variants_T11.2", "LTEE_mCitrine_GAP1_Variants_T13.1", "LTEE_mCitrine_GAP1_Variants_T13.2", "LTEE_mCitrine_GAP1_Variants_T14", "LTEE_mCitrine_GAP1_Variants_T15", "LTEE_mCitrine_GAP1_Variants_T18", "LTEE_mCitrine_GAP1_Variants_T22", "LTEE_mCitrine_GAP1_Variants_T25", "LTEE_mCitrine_GAP1_Variants_T27", "LTEE_mCitrine_GAP1_Variants_T29", "LTEE_mCitrine_GAP1_Variants_T34")
 
 
 
 #fcs run sample name
-#name <- list.folders[1]
+name <- list.folders[1]
 
 #date of gate to use
 date <- "2019-01-23"
-
-#Evaluate QC
-qc <- "FALSE"
 
 #fcs data to extract
 extract.FSC_A <- "Yes"
@@ -525,7 +522,7 @@ ggplot(filtered.data, aes(SAMPLE,FL1.A/FSC.A)) +
 ```{r Quantitation of Signal}
 
 ###FL1###
-baseline.FL1 <- stats.data$FL1_MEDIAN[2] #MUST REPLACE WITH YOUR FL1 ChannelCONTROL!!
+baseline.FL1 <- stats.data$FL1_MEDIAN[3] #MUST REPLACE WITH YOUR FL1 ChannelCONTROL!!
 ggplot(stats.data,aes(x=SAMPLE, y = FL1_MEDIAN/baseline.FL1)) +
   geom_col() +
   theme_bw() +
