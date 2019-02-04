@@ -24,6 +24,7 @@ This is the code to generate figures about CNV dynamics from aggregated flow cyt
 library(ggcyto)
 library(tidyverse)
 library(ggjoy)
+library(ggforce)
 
 
 
@@ -31,8 +32,8 @@ library(ggjoy)
 dir = '.'
 
 #file location
-#path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
-path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+#path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", 
                   "LTEE_mCitrine_GAP1_Variants_T06", 
@@ -43,28 +44,19 @@ list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00",
                   #"LTEE_mCitrine_GAP1_Variants_T13.1", 
                   "LTEE_mCitrine_GAP1_Variants_T13.2", 
                   "LTEE_mCitrine_GAP1_Variants_T14", 
-                  "LTEE_mCitrine_GAP1_Variants_T15"#, 
-                  #"LTEE_mCitrine_GAP1_Variants_T18", 
-                  #"LTEE_mCitrine_GAP1_Variants_T22", 
-                  #"LTEE_mCitrine_GAP1_Variants_T25", 
-                  #"LTEE_mCitrine_GAP1_Variants_T27", 
-                  #"LTEE_mCitrine_GAP1_Variants_T29", 
-                  #"LTEE_mCitrine_GAP1_Variants_T34"
-                  )
-list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", 
-                  "LTEE_mCitrine_GAP1_Variants_T06", 
-                  "LTEE_mCitrine_GAP1_Variants_T07", 
-                  "LTEE_mCitrine_GAP1_Variants_T08.3", 
-                  "LTEE_mCitrine_GAP1_Variants_T11.2", 
-                  "LTEE_mCitrine_GAP1_Variants_T13.2", 
-                  "LTEE_mCitrine_GAP1_Variants_T14", 
-                  "LTEE_mCitrine_GAP1_Variants_T15")
+                  "LTEE_mCitrine_GAP1_Variants_T15", 
+                  "LTEE_mCitrine_GAP1_Variants_T18", 
+                  "LTEE_mCitrine_GAP1_Variants_T22", 
+                  "LTEE_mCitrine_GAP1_Variants_T25", 
+                  "LTEE_mCitrine_GAP1_Variants_T27", 
+                  "LTEE_mCitrine_GAP1_Variants_T29", 
+                  "LTEE_mCitrine_GAP1_Variants_T34")
 
 
 date <- "2019-01-24"
 ```
 
-```{r} Load Data
+```{r Load Data}
 
 alldata<-read_csv(paste(path.data,date,"/","All_Data_prop_2019-01-24.csv", sep=""))
 
@@ -72,7 +64,7 @@ alldata$FL1_MEDIAN <- (alldata %>% filter(GENOTYPE=="Two copy control") %>% filt
 
 ```
 
-```{r} Read in  Data
+```{r Read in  Data}
 
 data <- read_csv(paste(path.data,date,"/",list.folders[1],"_prop_",date,".csv", sep=""))
 
@@ -114,6 +106,142 @@ data$VESSEL <- as.factor(data$VESSEL)
 alldata <- data
 
 #median  fluor#
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 1) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 2) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 3) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 4) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 5) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 6) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 7) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=VESSEL)) +
+  geom_point() +
+  geom_line(aes(linetype=VESSEL), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=rep(c("solid", "dashed", "dotdash", "longdash", "twodash", "F1", "4C88C488", "12345678"),4)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(VESSEL ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 8) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+```
+```{r Median fl1 over time}
+
+data$VESSEL <- as.factor(data$VESSEL)
+
+alldata <- data
+
+#median  fluor#
 myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=VESSEL)) +
   geom_point() +
   geom_line(aes(linetype=VESSEL), size=1.2) +
@@ -123,13 +251,17 @@ myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(FL1_MEDIAN), colour=VESSEL)) +
   theme_classic() +
   #scale_color_brewer(palette="Spectral", direction = 1) +
   #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
-  #facet_grid(Population ~ .) +
+  #facet_grid(VESSEL ~ .) +
   #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 1) +
   guides(colour = guide_legend(override.aes = list(size=2))) + 
   theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
 
+
 myplot #%+% subset(alldata, Nutrient %in% c("Glutamine"))
 ```
+
+
 ###PLOT NORMALIZED FLUOR###
 #myplot <- ggplot(alldata, aes(x=TIMEPOINT,y=(NORMALIZED_GFP_MEDIAN), colour=POPULATION)) +
   geom_point() +
