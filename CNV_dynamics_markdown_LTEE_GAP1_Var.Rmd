@@ -1,24 +1,43 @@
 ---
-title: "LTEE_CNV_Dynamics"
-author: "Nathan Brandt"
-date: "1/22/2019"
-output: html_document
+title: "Gresham Lab Flow Cytometry Multi Timepoint Analysis"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## R Markdown
 
 This is the code to generate figures about CNV dynamics from aggregated flow cyto data.
 
-```{r Load libs + data}
 
-###To get libraries from BioConductor.  This only needs to be run the first time
-#source("http://bioconductor.org/biocLite.R")
-#biocLite("ggcyto")
-#biocLite("tidyverse")
+This notebook contains the code necessary to to generate figures from flow cytometry data across timepoints in the Gresham Lab. 
+
+To analyze flow cytometry data, you MUST use the latest version of this code, available on the [Gresham Lab github](https://github.com/GreshamLab/flow).
+
+**Experimental overview**
+
+Write a detailed description of your experiment here including the goal of the analysis and your interpretation of the results.   
+If you still see this text it means that you have not described the experiment and whatever follows is meaningless.
+
+**Requirements**
+
+In order to run this code you need:
+
+* have run the "Gresham Lab Floww Cytometry Single Timepoint Analysis" and saved the proportional data, the filtered individual flow data, and/or the statistical data on one or more flowcyto runs
+
+
+**Output**  
+This script combines the data from multiple flow cyto runs and can save the combined runs in the following formats
+
+1. As a dataframe converted from fcs with all or some of the data.
+2. As a .csv with summary statistics (e.g. median FL1 per sample)
+3. As a .csv with proportional data  (e.g. cells flourescent in population)
+
+**Libraries**
+
+```{r Load libs}
 
 #Load libraries
 library(ggcyto)
@@ -26,13 +45,15 @@ library(tidyverse)
 library(ggjoy)
 library(ggforce)
 
+```
 
 
+```{r User Defined Variables}
 #working directory
 dir = '.'
 
 #file location
-path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/"
+path.data = "/Users/Brandt/Google Drive/MiniStatRun_10_2018/2019-01-24/"
 #path.data = "/Users/nathanbrandt/Google Drive/MiniStatRun_10_2018/"
 
 list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00", 
@@ -52,47 +73,100 @@ list.folders <- c("LTEE_mCitrine_GAP1_Variants_T00",
                   "LTEE_mCitrine_GAP1_Variants_T29", 
                   "LTEE_mCitrine_GAP1_Variants_T34")
 
+#name of the experiment
+name <- "LTEE_mCitrine_GAP1_Variants"
 
+#date of extracted data to use
 date <- "2019-01-24"
+
+
+#style of input
+#Read in and combine individual Proportional Data
+read.prop <- "Yes"
+#Read in and combine individual DataFrames 
+read.df <- "Yes"
+#Read in and combine individual Experiment Statistics
+read.stats <- "Yes"
+
+#Save combined Proportional Data
+save.prop <- "Yes"
+#Save combined DataFrame - Individual data points
+save.df <- "Yes"
+#Load combined Experiment Statistics
+save.stats <- "Yes"
+
+#Load combined Proportional Data
+load.prop <- "No"
+#Load combined DataFrame - Individual data points
+load.df <- "No"
+#Load combined Experiment Statistics
+load.stats <- "No"
+
+
+#filenames
+file.prop <- paste(name,"_prop_alldata_",Sys.Date(),sep="")
+file.df <- paste(name,"_df_alldata_",Sys.Date(),sep="")
+file.stats <- paste(name,"_stats_alldata_",Sys.Date(),sep="")
+
 ```
 
-```{r Load Data}
 
-alldata<-read_csv(paste(path.data,date,"/","All_Data_prop_2019-01-24.csv", sep=""))
+```{r Read or load in  Data}
 
-alldata$FL1_MEDIAN <- (alldata %>% filter(GENOTYPE=="Two copy control") %>% filter(TIMEPOINT==58.169464048643))$FL1_MEDIAN-90000
-
-```
-
-```{r Read in  Data}
-
-data <- read_csv(paste(path.data,date,"/",list.folders[1],"_prop_",date,".csv", sep=""))
-
-
-for(i in 2:length(list.folders)){
-  data.temp <- read_csv(paste(path.data,date,"/",list.folders[i],"_prop_",date,".csv", sep=""))
-  data<- bind_rows(data, data.temp)
+#Read in and Combine Proportional Data
+if(read.prop=="Yes"){
+  data.prop <- read_csv(paste(path.data,list.folders[1],"_prop_",date,".csv", sep=""))
+  for(i in 2:length(list.folders)){
+    data.prop_temp <- read_csv(paste(path.data,list.folders[i],"_prop_",date,".csv", sep=""))
+    data.prop<- bind_rows(data.prop, data.prop_temp)
+  }
+  data.prop <- select(data.prop,-c(1))
+}
+if(save.prop=="Yes"){
+  write.csv(data.prop, file= paste(file.prop,".csv",sep=""), row.names=TRUE, quote=F)
 }
 
-write.csv(data, file= "All_Data_prop_2019-01-24.csv", row.names=TRUE, quote=F)
-
-
-#Load data frame
-load(paste(path.data,date,"/",list.folders[1],"_df_",date,".Rdata",sep=""))
-data2 <- filtered.data
-for(i in 2:length(list.folders)) {
-  load(paste(path.data,date,"/",list.folders[i],"_df_",date,".Rdata",sep=""))
-  data2.temp<-filtered.data
-  data2 <- rbind(data2, data2.temp)
+#Read in and Combine data frames
+if(read.df=="Yes"){
+  load(paste(path.data,list.folders[1],"_df_",date,".Rdata",sep=""))
+  data.df <- filtered.data
+  for(i in 2:length(list.folders)) {
+    load(paste(path.data,list.folders[i],"_df_",date,".Rdata",sep=""))
+    data.df_temp<-filtered.data
+    data.df <- rbind(data.df, data.df_temp)
+  }
+}
+if(save.df=="Yes"){
+  save(data.df, file=paste(file.df,".Rdata",sep=""))
 }
 
-save(data2, file="All_Data_df_2019-01-24.Rdata")
+#Read in and Combine Statistical Data
+if(read.stats=="Yes"){
+  data.stats <- read_csv(paste(path.data,list.folders[1],"_stats_",date,".csv", sep=""))
+  for(i in 2:length(list.folders)){
+    data.stats_temp <- read_csv(paste(path.data,list.folders[i],"_stats_",date,".csv", sep=""))
+    data.stats<- bind_rows(data.stats, data.stats_temp)
+  }
+  data.stats <- select(data.stats,-c(1))
+} 
+if(save.stats=="Yes"){
+  write.csv(data.stats, file= paste(file.stats,".csv",sep=""), row.names=TRUE, quote=F)
+}
 
-#Data located here:
-#alldata_unmasked <- read.csv("DataOut_11302018.csv")
+#Loading Data
+#Read in and Combine Proportional Data
+if(load.prop=="Yes"){
+  alldata.prop <- read_csv(paste(path.data,name,"_prop_alldata_",date,".csv",sep=""))
+}
+#Read in and Combine data frames
+if(load.df=="Yes"){
+  load(paste(path.data,name,"_df_alldata_",date,".Rdata",sep=""))
+}
+#Read in and Combine Statistical Data
+if(load.stats=="Yes"){
+  alldata.stats <- read_csv(paste(path.data,name,"_stats_alldata_",date,".csv",sep=""))
+}
 
-#Mask out data with fewer than 75000 cells counted
-#alldata=alldata_unmasked %>% filter(Cells.counted > 75000)
 
 ```
 
@@ -101,7 +175,6 @@ save(data2, file="All_Data_df_2019-01-24.Rdata")
 
 ```{r Median fl1 over time}
 
-data$VESSEL <- as.factor(data$VESSEL)
 
 alldata <- data
 
