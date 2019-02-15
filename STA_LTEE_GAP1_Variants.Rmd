@@ -325,7 +325,7 @@ for(i in 1:length(flowData)){
   media <- as.character(pData(flowData)$Media[i])
   exp <- as.character(pData(flowData)$Experiment[i])
   pop <- as.character(pData(flowData)$Population[i])
-  time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
+  time <- (as.numeric(round(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12))
   ves <- as.character(pData(flowData)$Vessel[i])
 
   if(pData(flowData[i])$Population == '0_Copy_Control') {
@@ -408,7 +408,7 @@ stats.data <- cbind(sample.param,COUNT=NA,FSC_MEDIAN=NA,FSC_MEAN=NA,FSC_SD=NA,FL
   media <- as.character(pData(flowData)$Media[i])
   exp <- as.character(pData(flowData)$Experiment[i])
   pop <- as.character(pData(flowData)$Population[i])
-  time <- (as.numeric(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12)
+  time <- (as.numeric(round(pData(flowData)$Timepoint[i]) * 24)/(log(2)/.12))
   ves <- as.character(pData(flowData)$Vessel[i])
 
   
