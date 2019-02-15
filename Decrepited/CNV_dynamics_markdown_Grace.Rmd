@@ -1,0 +1,197 @@
+---
+title: "CNV dynamics"
+author: "Grace Avecilla ga824"
+date: "9/26/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is the code to generate figures about CNV dynamics from aggregated flow cyto data.
+
+```{r Load libs + data}
+
+###To get libraries from BioConductor.  This only needs to be run the first time
+#source("http://bioconductor.org/biocLite.R")
+#biocLite("flowViz")
+#biocLite("flowCore")
+
+#Load libraries
+library(flowCore)
+library(flowViz)
+library(ggplot2)
+library(reshape2)
+library(tidyverse)
+
+
+#Data located here: ~/Google_Drive/Gresham Lab_Grace/GA_EE_glnurmix_barcode17/Flow_analysis
+#setwd("~/Google_Drive/Gresham Lab_Grace/GA_EE_glnurmix_barcode17/Flow_analysis/GA_EE_glnurmix_barcodes17_FLOWSUMMARY.csv")
+alldata_unmasked <- read.csv("GA_EE_glnurmix_barcodes17_FLOWSUMMARY.csv")
+
+#Mask out data with fewer than 75000 cells counted
+alldata=subset(alldata_unmasked[,1:23], with(alldata_unmasked,alldata_unmasked$Cells.counted > 75000))
+```
+
+##Plots
+
+
+```{r Median fl1 over time}
+###PLOT NORMALIZED FLUOR###
+myplot <- ggplot(alldata, aes(x=Generation,y=(normalizedGFP_median), colour=Sample)) +
+  geom_point() +
+  geom_line(aes(linetype=Population), size=1.2) +
+  scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  #scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  scale_color_brewer(palette="Spectral", direction = 1) +
+  #scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea"))
+
+#median unnormalized fluor#
+myplot <- ggplot(alldata, aes(x=Generation,y=(FL1_median), colour=Sample)) +
+  geom_point() +
+  geom_line(aes(linetype=Population), size=1.2) +
+  #scale_y_continuous('Normalized fluorescence signal', limits=c(0,0.8)) +
+  scale_linetype_manual(values=c("twodash", "twodash", "twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B","#2171B5", "#08519C", "#08306B")) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea"))
+```
+
+
+```{r Proportion CNV cells}
+###PLOT PROPORTION OF 2 copy CELLS###
+myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_2copy), colour=Sample)) +
+  geom_point() +
+  geom_line(size=1.2) +
+  scale_y_continuous('Proportion of cells with 2 copies', limits=c(0,1)) +
+  #scale_linetype_manual(values=c("twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea") & Population %in% c("Experimental"))
+
+###PLOT PROPORTION OF 3+ COPY CELLS###
+myplot <- ggplot(alldata, aes(x=Generation,y=(PopProp_3plus), colour=Sample)) +
+  geom_point() +
+  geom_line(size=1.2) +
+  scale_y_continuous('Proportion of cells with 3+ copies', limits=c(0,1)) +
+  #scale_linetype_manual(values=c("twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  scale_color_manual(values = c("#E5F5E0","#C7E9C0", "#A1D99B", "#74C476", "#41AB5D", "#238B45", "#006D2C", "#00441B")) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine") & Population %in% c("Experimental"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea") & Population %in% c("Experimental"))
+
+```
+
+```{r FSC over time}
+####FSC over time####
+myplot <- ggplot(alldata, aes(x=Generation,y=(FSC_median), colour=Sample)) +
+  geom_point() +
+  geom_line(size=1.2) +
+  scale_y_continuous('FSC') +
+  #scale_linetype_manual(values=c("twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  scale_color_manual(values = c('darkblue','#6baed6','blue', '#a1d99b','#74c476','#41ab5d','#238b45','#006d2c','#00441b', '#08306b', 'black')) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea"))
+
+####FSC over time without subsetting####
+myplot <- ggplot(alldata_unmasked, aes(x=Generation,y=(FSC_median), colour=Sample)) +
+  geom_point() +
+  geom_line(size=1.2) +
+  scale_y_continuous('FSC all') +
+  #scale_linetype_manual(values=c("twodash", "solid")) +
+  scale_x_continuous("Generations") +
+  theme_classic() +
+  #scale_color_brewer(palette="Spectral", direction = 1) +
+  scale_color_manual(values = c('darkblue','#6baed6','blue', '#a1d99b','#74c476','#41ab5d','#238b45','#006d2c','#00441b', '#08306b', 'black')) + 
+  #facet_grid(Population ~ .) +
+  #scale_color_manual(name="Type",values=c("black", "black", "#41ab5d")) +
+  guides(colour = guide_legend(override.aes = list(size=2))) + 
+  theme(legend.title = element_text(colour="black", size=15, face="bold"), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16), axis.text.x = element_text(size=15))
+
+myplot %+% subset(alldata, Nutrient %in% c("Glutamine"))
+myplot %+% subset(alldata, Nutrient %in% c("Gln_Urea"))
+```
+```{r Barplots CNVs over time --- masked and unmasked}
+new <- melt(alldata, id.vars = c("Generation", "Sample", "Nutrient"), measure.vars = c("PopProp_0copy","PopProp_1copy","PopProp_2copy","PopProp_3plus"))
+new <- data.frame(Generation=as.character(new[,1]), Population=as.character(new[,2]), Nutrient=as.character(new[,3]), variable=as.character(new[,4]), value=as.numeric(new[,5])) 
+
+new$Generation <- factor(new$Generation, levels = unique(alldata$Generation))
+new$variable <- factor(new$variable, levels = c("PopProp_3plus", "PopProp_2copy", "PopProp_1copy", "PopProp_0copy"))
+
+theplot <- ggplot(new, aes(Generation, value, fill=variable)) + 
+  theme_classic() +
+  theme(legend.position = "top", legend.title = element_blank(), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16)) + 
+  geom_bar(colour = "black", position = "fill", stat = "identity", width = 0.9) +
+  scale_y_continuous("Proportion", limits=c(0,1)) + 
+  scale_fill_manual(values = c('#00441b', '#006d2c', '#a1d99b','#e5f5e0'))
+
+theplot %+% subset(new, Population %in% c("gln_h_bc01"))
+
+
+theplot %+% subset(new, Nutrient %in% c("Glutamine")) + 
+  facet_grid(Population ~ .)
+
+
+new <- melt(alldata_unmasked, id.vars = c("Generation", "Sample", "Nutrient"), measure.vars = c("PopProp_0copy","PopProp_1copy","PopProp_2copy","PopProp_3plus"))
+new <- data.frame(Generation=as.character(new[,1]), Population=as.character(new[,2]), Nutrient=as.character(new[,3]), variable=as.character(new[,4]), value=as.numeric(new[,5])) 
+
+new$Generation <- factor(new$Generation, levels = unique(alldata$Generation))
+new$variable <- factor(new$variable, levels = c("PopProp_3plus", "PopProp_2copy", "PopProp_1copy", "PopProp_0copy"))
+
+theplot <- ggplot(new, aes(Generation, value, fill=variable)) + 
+  theme_classic() +
+  theme(legend.position = "top", legend.title = element_blank(), axis.title.y = element_text(face="bold", size=14), axis.text.y = element_text(size=13), axis.title.x = element_text(face="bold", size=16)) + 
+  geom_bar(colour = "black", position = "fill", stat = "identity", width = 0.9) +
+  scale_y_continuous("Proportion", limits=c(0,1)) + 
+  scale_fill_manual(values = c('#00441b', '#006d2c', '#a1d99b','#e5f5e0'))
+
+theplot %+% subset(new, Population %in% c("gln_h_ctrl2"))
+
+
+theplot %+% subset(new, Nutrient %in% c("Glutamine")) + 
+  facet_grid(Population ~ .)
+```
+

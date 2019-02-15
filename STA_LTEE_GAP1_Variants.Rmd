@@ -149,8 +149,9 @@ sample.sheet <- read.csv(paste(path.data,"samplesheet_",name,".csv", sep=""))
 files <- paste(path.data,name,"/",sort(factor(list.files(paste(path.data,name,"/", sep=""),full.names=FALSE), levels = paste(sample.sheet$Well,".fcs",sep="" ), ordered=TRUE)),sep="")
 flowData <- read.ncdfFlowSet(files=files, pattern=".fcs", alter.names = TRUE)
 
-
-
+sample.ind <- which(paste(sample.sheet$Well,".fcs", sep="") %in% sampleNames(flowData))
+sample.sheet <- sample.sheet[sample.ind,]
+sample.sheet <- sample.sheet[order(sample.sheet$Well),]
 
 #Adds a sample sheet data to the pData of the flowset
 
@@ -179,8 +180,8 @@ load(file = paste(path.data,name,"_gates_",date,".Rdata",sep=""))
 #Check how many cells were counted in each fcs file
 total <- fsApply(flowData, each_col, length)[1:length(flowData)] #total counts per sample
 print(total)
-#Print the medians of data values for each measurement
-fsApply(flowData, each_col, median)[1:length(flowData)]
+#Print the summary of data values for each sample
+summary(flowData)
 
 samples.num <- length(flowData)
 print(samples.num)

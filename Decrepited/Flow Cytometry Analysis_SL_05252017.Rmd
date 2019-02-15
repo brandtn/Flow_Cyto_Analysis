@@ -1,0 +1,771 @@
+---
+title: "Gresham Lab Flow Core Guide"
+author: '`r Sys.info()[7]`'
+date: '`r Sys.Date()`'
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+    number_sections: yes
+    toc: yes
+---
+
+
+**Experiment overview**
+
+Write a detailed description of your experiment here including the goal of the analysis and your interpretation of the results.   
+If you still see this text it means that you have not described the experiment and whatever follows is meaningless.
+###############################
+
+> This code is designed for use with the Accuri flow cytometer, which is equiped with the following lasers and filters
+
+* Blue laser (488 nm)
+  + FL1 filter = 514/20nm   GFP
+  + FL3 filter = 575/25nm   YFP
+
+* Yellow/green laser (552 nm)
+  + FL2 filter = 610/20nm   mCherry, dtomato
+  + FL4 filter = 586/15nm   DsRed
+  
+  
+
+**Requirements**  
+In order to run this code you need:  
+  + to predefine your gates using the **gating.R** script  
+  + the **gates.Rdata** workspace, which contains the gates used in this script  
+  + the path of the directory(ies), given the variable names **dir1**, **dir2**... that contain .fcs files named A01.fcs, A02.fcs, A03.fcs...  
+  + a tab delimited sample sheet in each directory with the following rows: <Well>	<Strain>	<Genotype>	<Ploidy>	<Media>	<Experiment>  
+  + the variable names are changed in chunk 2 named "Variable Names"    
+
+
+
+
+**Output**  
+This script generates a summary of results followed by quality control plots.  
+
+
+
+#Step 1: Load relevant libraries 
+```{r Libraries, eval=TRUE}
+# This is a function that just makes sure you have a package, or installs it for you without prompting
+
+requireInstall <- function(packageName,isBioconductor=F) {
+  if ( !try(require(packageName,character.only=T)) ) {
+    print(paste0("You don't have ",packageName," accessible, ",
+      "I'm gonna install it"))
+    if (isBioconductor) {
+      source("http://bioconductor.org/biocLite.R")                        
+      biocLite(packageName)                                                 
+    } else {
+      install.packages("packageName", repos = "http://cran.us.r-project.org")
+    }
+  }
+  return(1)
+}
+
+#Load libraries
+requireInstall("flowCore",isBioconductor=T)
+requireInstall("flowViz",isBioconductor=T)
+requireInstall("flowStats")
+requireInstall("Hmisc")
+requireInstall("reshape2")
+requireInstall("ggplot2")
+requireInstall("flowWorkspace")
+requireInstall("ggcyto", isBioconductor=T)
+requireInstall("gridExtra")
+
+
+```
+
+#Step 2: Read in .fcs files, an Rdata file containing the gates sample sheet(s) that contains four columns with 
+* column1 = Well
+* column2 = Strain
+* column3 = Staining
+* column4 = Media
+* column5 = Userdefined
+
+```{r Variable definitions}
+#Read in all data for analysis. Data should be in individual directories that contain .fcs files and a corresponding sample sheet with a generic format. FCS file names should be unaltered e.g AO1.fcs, A02.fcs, ...H12.fcs 
+#An abitrary number of directories can be used named dir1, dir2, dir3...with a corresponding flowData.1, flowData.2, flowData.3...and sample.sheet.1, sample.sheet.2, sample.sheet.3...
+
+#load the Rdata file containing the gates
+load("gates_05252017_MIDTPT.Rdata") 
+
+#Read in all the fcs files in the directory, with alter.names changing "-" to "."  
+flowData <- read.flowSet(path = ".", pattern=".fcs", alter.names=TRUE)
+
+#Read in the sample sheet that should be in each directory that contains the .fcs files.  
+sample.sheet <- read.delim(paste("SampleSheet.txt", sep="/"))
+
+#Change names of samples to those specified in the sample sheets
+sampleNames(flowData) <- paste(sample.sheet[,1], sample.sheet[,2], sample.sheet[,3], sample.sheet[,4], sample.sheet[,5], sep=" ")
+```
+
+
+```{r flowSet summaries}
+#Check how many cells were counted in each fcs file
+fsApply(flowData, each_col, length)[1:32]
+
+total <- fsApply(flowData, each_col, length)[1:32]  #total counts per sample
+
+#Print the medians of data values for each measurement
+fsApply(flowData, each_col, median)
+
+#combine all flowSets into a single flowset
+samples.num <- length(flowData)
+
+```
+
+#Step 3: apply filters to data and generate plots showing the effect on filtering
+```{r Application of Gates}
+##Subset the data by applying sequential gates##
+
+#apply doublet gate to ALL SAMPLES
+flowData.singlets <- Subset(flowData, pg.singlets) 
+fsApply(flowData.singlets, each_col, length)[1:samples.num]
+singlets <- fsApply(flowData.singlets, each_col, length)[1:samples.num]
+barplot(singlets/total, ylim=c(0,1), ylab = "Proportion singlet cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowData))
+
+##Subset data by media type
+flowGlu <- flowSet(flowData[[1]], flowData[[2]], flowData[[3]], flowData[[9]], flowData[[10]], flowData[[11]], flowData[[17]], flowData[[18]], flowData[[25]], flowData[[26]])
+total.glu <- fsApply(flowGlu, each_col, length)[1:10]
+samples.num.glu <- length(flowGlu)
+sample.sheet.glu <- read.delim(paste("SampleSheetglu.txt", sep="/"))
+sampleNames(flowGlu) <- paste(sample.sheet.glu[,1], sample.sheet.glu[,2], sample.sheet.glu[,3], sample.sheet.glu[,4], sample.sheet.glu[,5], sep=" ")
+
+flowGlu.singlets <- Subset(flowGlu, pg.singletsGLU) 
+fsApply(flowGlu.singlets, each_col, length)[1:samples.num.glu]
+GLUsinglets <- fsApply(flowGlu.singlets, each_col, length)[1:samples.num.glu]
+barplot(GLUsinglets/total.glu, ylim=c(0,1), ylab = "Proportion GLUCOSE singlet cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+flowUr <- flowSet(flowData.singlets[[4]], flowData.singlets[[5]], flowData.singlets[[6]], flowData.singlets[[12]], flowData.singlets[[13]], flowData.singlets[[19]], flowData.singlets[[20]], flowData.singlets[[21]], flowData.singlets[[27]], flowData.singlets[[28]], flowData.singlets[[29]])
+total.ur <- fsApply(flowUr, each_col, length)[1:11]
+samples.num.ur <-length(flowUr)
+sample.sheet.ur <- read.delim(paste("SampleSheetur.txt", sep="/"))
+sampleNames(flowUr) <- paste(sample.sheet.ur[,1], sample.sheet.ur[,2], sample.sheet.ur[,3], sample.sheet.ur[,4], sample.sheet.ur[,5], sep=" ")
+
+flowGln <- flowSet(flowData.singlets[[7]], flowData.singlets[[8]], flowData.singlets[[14]], flowData.singlets[[15]], flowData.singlets[[16]], flowData.singlets[[22]], flowData.singlets[[23]], flowData.singlets[[24]], flowData.singlets[[30]], flowData.singlets[[31]], flowData.singlets[[32]])
+total.gln <- fsApply(flowGln, each_col, length)[1:11]
+samples.num.gln <- length(flowGln)
+sample.sheet.gln <- read.delim(paste("SampleSheetgln.txt", sep="/"))
+sampleNames(flowGln) <- paste(sample.sheet.gln[,1], sample.sheet.gln[,2], sample.sheet.gln[,3], sample.sheet.gln[,4], sample.sheet.gln[,5], sep=" ")
+
+
+###GLUCOSE GATES###
+#apply debris gates
+filteredGluData <- Subset(flowGlu.singlets, pg.nondebris.glu) 
+fsApply(filteredGluData, each_col, length)[1:samples.num.glu]
+non.debris.glu <- fsApply(filteredGluData, each_col, length)[1:samples.num.glu]
+barplot(non.debris.glu/total.glu, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+#this gate defines nongfp cells
+gfp.neg.glu <- Subset(filteredGluData, pg.zcht) 
+fsApply(gfp.neg.glu, each_col, length)[1:samples.num.glu]
+non.gfp.glu <- fsApply(gfp.neg.glu, each_col, length)[1:samples.num.glu]
+barplot(non.gfp.glu/non.debris.glu, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+#this gate defines one copy gfp cells
+gfp.one.glu <- Subset(filteredGluData, pg.ocht) 
+fsApply(gfp.one.glu, each_col, length)[1:samples.num.glu]
+gfp.one.cells.glu <- fsApply(gfp.one.glu, each_col, length)[1:samples.num.glu]
+barplot(gfp.one.cells.glu/non.debris.glu, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+#this gate defines two copy gfp cells
+gfp.two.glu <- Subset(filteredGluData, pg.twcht) 
+fsApply(gfp.two.glu, each_col, length)[1:samples.num.glu]
+gfp.two.cells.glu <- fsApply(gfp.two.glu, each_col, length)[1:samples.num.glu]
+barplot(gfp.two.cells.glu/non.debris.glu, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr.glu <- Subset(filteredGluData, pg.thrcht) 
+fsApply(gfp.thr.glu, each_col, length)[1:samples.num.glu]
+gfp.thr.cells.glu <- fsApply(gfp.thr.glu, each_col, length)[1:samples.num.glu]
+barplot(gfp.thr.cells.glu/non.debris.glu, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+###UREA GATES###
+#apply debris gates
+filteredUrData <- Subset(flowUr, pg.nondebris.ur) 
+fsApply(filteredUrData, each_col, length)[1:samples.num.ur]
+non.debris.ur <- fsApply(filteredUrData, each_col, length)[1:samples.num.ur]
+barplot(non.debris.ur/total.ur, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+#this gate defines nongfp cells
+gfp.neg.ur <- Subset(filteredUrData, ur.zcht) 
+fsApply(gfp.neg.ur, each_col, length)[1:samples.num.ur]
+non.gfp.ur <- fsApply(gfp.neg.ur, each_col, length)[1:samples.num.ur]
+barplot(non.gfp.ur/non.debris.ur, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+#this gate defines one copy gfp cells
+gfp.one.ur <- Subset(filteredUrData, ur.ocht) 
+fsApply(gfp.one.ur, each_col, length)[1:samples.num.ur]
+gfp.one.cells.ur <- fsApply(gfp.one.ur, each_col, length)[1:samples.num.ur]
+barplot(gfp.one.cells.ur/non.debris.ur, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+#this gate defines two copy gfp cells
+gfp.two.ur <- Subset(filteredUrData, ur.twcht) 
+fsApply(gfp.two.ur, each_col, length)[1:samples.num.ur]
+gfp.two.cells.ur <- fsApply(gfp.two.ur, each_col, length)[1:samples.num.ur]
+barplot(gfp.two.cells.ur/non.debris.ur, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr.ur <- Subset(filteredUrData, ur.thrcht) 
+fsApply(gfp.thr.ur, each_col, length)[1:samples.num.ur]
+gfp.thr.cells.ur <- fsApply(gfp.thr.ur, each_col, length)[1:samples.num.ur]
+barplot(gfp.thr.cells.ur/non.debris.ur, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+###GLUTAMINE GATES###
+#apply debris gates
+filteredGlnData <- Subset(flowGln, pg.nondebris.gln) 
+fsApply(filteredGlnData, each_col, length)[1:samples.num.gln]
+non.debris.gln <- fsApply(filteredGlnData, each_col, length)[1:samples.num.gln]
+barplot(non.debris.gln/total.gln, ylim=c(0,1), ylab = "Proportion nondebris cells", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+#this gate defines nongfp cells
+gfp.neg.gln <- Subset(filteredGlnData, gln.zcht) 
+fsApply(gfp.neg.gln, each_col, length)[1:samples.num.gln]
+non.gfp.gln <- fsApply(gfp.neg.gln, each_col, length)[1:samples.num.gln]
+barplot(non.gfp.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with no GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+#this gate defines one copy gfp cells
+gfp.one.gln <- Subset(filteredGlnData, gln.ocht) 
+fsApply(gfp.one.gln, each_col, length)[1:samples.num.gln]
+gfp.one.cells.gln <- fsApply(gfp.one.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.one.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 1 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+#this gate defines two copy gfp cells
+gfp.two.gln <- Subset(filteredGlnData, gln.twcht) 
+fsApply(gfp.two.gln, each_col, length)[1:samples.num.gln]
+gfp.two.cells.gln <- fsApply(gfp.two.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.two.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 2 copy GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+#this gate defines thre copy plus gfp cells
+gfp.thr.gln <- Subset(filteredGlnData, gln.thrcht) 
+fsApply(gfp.thr.gln, each_col, length)[1:samples.num.gln]
+gfp.thr.cells.gln <- fsApply(gfp.thr.gln, each_col, length)[1:samples.num.gln]
+barplot(gfp.thr.cells.gln/non.debris.gln, ylim=c(0,1), ylab = "Proportion cells with 3 copy+ GFP", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+```
+
+#Step 4: Data analysis
+
+##diagnostic values can be defined for plotting purposes
+```{r Definition of diagnostic values}
+#define critical values that can superimposed on plots for easy visual comparison
+
+gfp.bg <- 3.9  #a background value for GFP
+gfp.wt <- 5.9 #a value for wildtype GFP expression
+haploid.fsc <- 6e5 #an empirical value for forward scatter for haploids
+diploid.fsc <- 7e5 #an empirical value for forward scatter for diploids
+gfp.norm <- 0.935 #an empricial value for gfp expression normalized by forward scatter
+
+```
+
+##Extract data from fcs files to generate statistics and boxplots
+```{r Data extraction and plotting}
+###GLUCOSE###
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats.glu <- matrix(data = NA, nrow = length(filteredGluData), ncol = 9, dimnames = list(sampleNames(filteredGluData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size.glu <- min(fsApply(filteredGluData, each_col, length))  
+
+print(sample.size.glu)
+
+comparison.FSC.glu <- matrix(data = NA, nrow = sample.size.glu, ncol = length(filteredGluData), byrow = FALSE,dimnames = NULL)
+comparison.FL1.glu <- matrix(data = NA, nrow = sample.size.glu, ncol = length(filteredGluData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc.glu <- matrix(data = NA, nrow = sample.size.glu, ncol = length(filteredGluData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filteredGluData)){
+ 
+  temp <- exprs(filteredGluData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats.glu[i,1] <- median(temp[,1]) 
+  summary.stats.glu[i,2] <-mean(temp[,1])  
+  summary.stats.glu[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats.glu[i,4] <- median(temp[,3])
+  summary.stats.glu[i,5] <-mean(temp[,3])  
+  summary.stats.glu[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats.glu[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats.glu[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats.glu[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowGlu[i]), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowGlu[i]), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC.glu[1:sample.size.glu,i] <- temp[1:sample.size.glu,1] #FSC
+  comparison.FL1.glu[1:sample.size.glu,i] <- temp[1:sample.size.glu,3] #FL1 (GFP)
+  comparison.FL1NormFsc.glu[1:sample.size.glu,i] <- temp[1:sample.size.glu,3]/temp[1:sample.size.glu,1] #GFP/FSC
+}
+
+###UREA###
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats.ur <- matrix(data = NA, nrow = length(filteredUrData), ncol = 9, dimnames = list(sampleNames(filteredUrData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size.ur <- min(fsApply(filteredUrData, each_col, length))  
+
+print(sample.size.ur)
+
+comparison.FSC.ur <- matrix(data = NA, nrow = sample.size.ur, ncol = length(filteredUrData), byrow = FALSE,dimnames = NULL)
+comparison.FL1.ur <- matrix(data = NA, nrow = sample.size.ur, ncol = length(filteredUrData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc.ur <- matrix(data = NA, nrow = sample.size.ur, ncol = length(filteredUrData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filteredUrData)){
+ 
+  temp <- exprs(filteredUrData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats.ur[i,1] <- median(temp[,1]) 
+  summary.stats.ur[i,2] <-mean(temp[,1])  
+  summary.stats.ur[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats.ur[i,4] <- median(temp[,3])
+  summary.stats.ur[i,5] <-mean(temp[,3])  
+  summary.stats.ur[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats.ur[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats.ur[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats.ur[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowUr[i]), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowUr[i]), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC.ur[1:sample.size.ur,i] <- temp[1:sample.size.ur,1] #FSC
+  comparison.FL1.ur[1:sample.size.ur,i] <- temp[1:sample.size.ur,3] #FL1 (GFP)
+  comparison.FL1NormFsc.ur[1:sample.size.ur,i] <- temp[1:sample.size.ur,3]/temp[1:sample.size.ur,1] #GFP/FSC
+}
+
+par(mfrow=c(1,1)) #change number of plots per row back to standard
+
+###GLUTAMINE###
+#record summary statistics for each sample in a matrix named summary.stats 
+summary.stats.gln <- matrix(data = NA, nrow = length(filteredGlnData), ncol = 9, dimnames = list(sampleNames(filteredGlnData),c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd")))
+
+#use the sample containing the minimum number of points after filtering for doublets and debris to define the number of data points retained for all samples
+sample.size.gln <- min(fsApply(filteredGlnData, each_col, length))  
+
+print(sample.size.gln)
+
+comparison.FSC.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+comparison.FL1.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+comparison.FL1NormFsc.gln <- matrix(data = NA, nrow = sample.size.gln, ncol = length(filteredGlnData), byrow = FALSE,dimnames = NULL)
+
+#for each sample plot a histogram of the normalized data, raw FSC and raw GFP per row
+par(mfrow=c(1,2), mar=c(5.1,2.1,2.1,2.1), oma=c(1.5,2,1,1))
+
+#extract data from flowFrames to plot histograms of values and record summary statistics
+for (i in 1:length(filteredGlnData)){
+ 
+  temp <- exprs(filteredGlnData[[i]]) #exprs() extracts a matrix of the values from the flowframe
+ 
+
+  ##########################################
+  #record summary statistics for the sample#
+  ##########################################
+  
+  #FSC
+  summary.stats.gln[i,1] <- median(temp[,1]) 
+  summary.stats.gln[i,2] <-mean(temp[,1])  
+  summary.stats.gln[i,3] <- sd(temp[,1])
+  #FL1
+  summary.stats.gln[i,4] <- median(temp[,3])
+  summary.stats.gln[i,5] <-mean(temp[,3])  
+  summary.stats.gln[i,6] <- sd(temp[,3])
+  #FL1 (GFP) divided by FSC
+  summary.stats.gln[i,7] <- median(temp[,3]/temp[,1])
+  summary.stats.gln[i,8] <-mean(temp[,3]/temp[,1])  
+  summary.stats.gln[i,9] <- sd(temp[,3]/temp[,1])
+  
+  ##############################################
+  #plot histograms of the channels of interest##
+  ##############################################
+
+  ###############
+  #Green channel#
+  ###############
+  
+  #FL1 (GFP)
+  hist(log10(temp[,3]), br=1000, xlab = "log10(FL1)", main = "FL1") 
+  abline(v=gfp.bg, col="yellow", lty=2, lwd=2)
+  abline(v=gfp.wt, col="green", lty=2, lwd=2) 
+  legend("topleft",  legend=paste("median FL1 = ",round(median(temp[,3]), digits=4),sep=""))
+
+  #GFP divided by FSC
+  hist(temp[,3]/temp[,1], br=500, xlab = "FL1/FSC", main = "FL1/FSC") 
+  abline(v=gfp.norm, col="green", lty=2, lwd=2 )
+  legend("topleft",  legend=paste("median GFP / FSC=",round(median(temp[,3]/temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowGln[i]), outer = TRUE, cex = 1.0)
+  
+  ###############
+  #Other#########
+  ###############
+
+    #FSC
+  hist(log10(temp[,1]), br=500, xlab = "log10(FSC)", main = "FSC", xlim=c(4,8)) 
+  abline(v=haploid.fsc, col="blue", lty=2, lwd=2)
+  abline(v=diploid.fsc, col="grey", lty=2, lwd=2)
+  legend("topleft",  legend=paste("median FSC=",round(median(temp[,1]), digits=4),sep=""))
+  
+  mtext(sampleNames(flowGln[i]), outer = TRUE, cex = 1.0)
+
+print("-------------------------------------------------------")
+print("-----------------------------------")
+print("----------------------")
+
+  ############################################################
+  #keep the data set for generating boxplots comparing values#
+  ############################################################
+  
+  #Note that the amount of data kept for each sample is defined by the lowest count among all the samples.
+  comparison.FSC.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,1] #FSC
+  comparison.FL1.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,3] #FL1 (GFP)
+  comparison.FL1NormFsc.gln[1:sample.size.gln,i] <- temp[1:sample.size.gln,3]/temp[1:sample.size.gln,1] #GFP/FSC
+}
+
+```
+
+
+##Overview of data distributions
+```{r Overall data distributions}
+par(mar=c(8.1,4.1,4.1,2.1)) #create more space at lower margin
+
+###GLUCOSE###
+boxplot(comparison.FSC.glu, names=sampleNames(flowGlu), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1.glu, names=sampleNames(flowGlu), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc.glu, names=sampleNames(flowGlu), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+###UREA###
+boxplot(comparison.FSC.ur, names=sampleNames(flowUr), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1.ur, names=sampleNames(flowUr), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc.ur, names=sampleNames(flowUr), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+###GLUTAMINE###
+boxplot(comparison.FSC.gln, names=sampleNames(flowGln), notch = TRUE, col = "gray", ylab="FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=haploid.fsc, lty=2, col=2)
+abline(h=diploid.fsc, lty=2, col=3)
+
+boxplot(comparison.FL1.gln, names=sampleNames(flowGln), notch = TRUE, col = "lightgreen", ylab="FL1", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.bg ,lty=2, lwd=3, col="yellow")
+abline(h=gfp.wt, lty = 2, lwd=3, col="green")
+
+boxplot(comparison.FL1NormFsc.gln, names=sampleNames(flowGln), notch = TRUE, col = "green", ylab="FL1/FSC", cex.axis=0.5,las=2, outline=F)
+abline(h=gfp.norm, lty=2, lwd=3, col="blue")
+
+par(mar=c(5.1,4.1,4.1,2.1)) #reset margins to default
+
+#generate summary tables containing all the recorded statistics
+print(summary.stats.glu)
+summary.stats.glu <- as.data.frame(summary.stats.glu)
+print(summary.stats.ur)
+summary.stats.ur <- as.data.frame(summary.stats.ur)
+print(summary.stats.gln)
+summary.stats.gln <- as.data.frame(summary.stats.gln)
+
+```
+
+
+##Quantitation of relative FL1 signal
+```{r }
+###GLUCOSE###
+baseline.FL1.glu <- summary.stats.glu$FL1_median[3] #MUST REPLACE WITH YOUR 1 COPY CONTROL!!
+barplot(summary.stats.glu$FL1_median/baseline.FL1.glu, ylim = c(0,2), ylab="Relative FL1 median expression", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+###UREA###
+baseline.FL1.ur <- summary.stats.ur$FL1_median[11] #MUST REPLACE WITH YOUR 1 COPY CONTROL!!
+barplot(summary.stats.ur$FL1_median/baseline.FL1.ur, ylim = c(0,2), ylab="Relative FL1 median expression", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+###GLUTAMINE###
+baseline.FL1.gln <- summary.stats.gln$FL1_median[11] #MUST REPLACE WITH YOUR 1 COPY CONTROL!!
+barplot(summary.stats.gln$FL1_median/baseline.FL1.gln, ylim = c(0,2), ylab="Relative FL1 median expression", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+```
+
+##Quantitation of forward scatter
+```{r}
+
+###GLUCOSE###
+baseline.FSC.glu <- summary.stats.glu$FSC_median[3]
+barplot(summary.stats.glu$FSC_median/baseline.FSC.glu, ylab="Relative median FSC", las=2, cex.names = 0.5, names.arg=sampleNames(flowGlu))
+
+###UREA###
+baseline.FSC.ur <- summary.stats.ur$FSC_median[11]
+barplot(summary.stats.ur$FSC_median/baseline.FSC.ur, ylab="Relative median FSC", las=2, cex.names = 0.5, names.arg=sampleNames(flowUr))
+
+###GLUTAMINE###
+baseline.FSC.gln <- summary.stats.gln$FSC_median[11]
+barplot(summary.stats.gln$FSC_median/baseline.FSC.gln, ylab="Relative median FSC", las=2, cex.names = 0.5, names.arg=sampleNames(flowGln))
+
+```
+
+##Population composition
+```{r}
+###GLUCOSE###
+pop.composition.glu <- rbind(non.gfp.glu/non.debris.glu,gfp.one.cells.glu/non.debris.glu,gfp.two.cells.glu/non.debris.glu, gfp.thr.cells.glu/non.debris.glu)
+barplot(pop.composition.glu, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=sampleNames(flowGlu))
+
+###UREA###
+pop.composition.ur <- rbind(non.gfp.ur/non.debris.ur,gfp.one.cells.ur/non.debris.ur,gfp.two.cells.ur/non.debris.ur, gfp.thr.cells.ur/non.debris.ur)
+barplot(pop.composition.ur, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=sampleNames(flowUr))
+
+###GLUTAMINE###
+pop.composition.gln <- rbind(non.gfp.gln/non.debris.gln,gfp.one.cells.gln/non.debris.gln,gfp.two.cells.gln/non.debris.gln, gfp.thr.cells.gln/non.debris.gln)
+barplot(pop.composition.gln, ylab="Proportion of population", legend=c("No GFP", "One copy GFP", "Two copy GFP", "Three+ copy GFP"),las=2, ylim=c(0,1), col=c("black", "grey", "light green", "dark green"), cex.names = 0.5,names.arg=sampleNames(flowGln))
+
+```
+
+#Step 5: Quality control
+
+##Gates
+```{r}
+#Singlets gate
+xyplot(FSC.A~FSC.H, data=flowData, xlim=c(0,3e6), ylim=c(0,3e6), filter=pg.singlets,  smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "First flowset - singlets gate")
+
+###GLUCOSE###
+#Debris gate
+xyplot(SSC.A ~ FSC.A, data=flowGlu, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris.glu, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glucose - nondebris gate")
+
+#Non-fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGluData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.zcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glucose - non GFP gate")
+
+#ONe copy Fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGluData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.ocht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glucose - One copy GFP gate")
+
+#Two copy fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGluData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.twcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glucose - Two copy GFP gate")
+
+#Three copy plus fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGluData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.thrcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glucose - Three+ copy GFP gate")
+
+###UREA###
+#Debris gate
+xyplot(SSC.A ~ FSC.A, data=flowUr, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris.ur, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Urea - nondebris gate")
+
+#Non-fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredUrData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=ur.zcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Urea - non GFP gate")
+
+#ONe copy Fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredUrData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=ur.ocht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Urea - One copy GFP gate")
+
+#Two copy fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredUrData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=ur.twcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Urea - Two copy GFP gate")
+
+#Three copy plus fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredUrData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=ur.thrcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Urea - Three+ copy GFP gate")
+
+###UREA###
+#Debris gate
+xyplot(SSC.A ~ FSC.A, data=flowGln, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=pg.nondebris.gln, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - nondebris gate")
+
+#Non-fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.zcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T,  main = "Glutamine - non GFP gate")
+
+#ONe copy Fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.ocht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - One copy GFP gate")
+
+#Two copy fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.twcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Two copy GFP gate")
+
+#Three copy plus fluorescent population gate
+xyplot(FL1.A~FSC.A,data=filteredGlnData, displayFilter=TRUE, xlim=c(0,5e6), ylim=c(0,6e5), filter=gln.thrcht, smooth=F, xbin=1024, stat=T, pos=0.5, abs=T, main = "Glutamine - Three+ copy GFP gate")
+```
+
+
+##Data transformation for visualization
+```{r}
+#In order to look at QC plots the data is transformed using the logicle transform, which is a log transform for high values that transitions to a linear transformation near zero values 
+
+#This is simply for visualization purposes
+
+lgcl <- logicleTransform(w = 0.5, t= 10000, m=4.5) #the parameters w,t, and m define the transformation parameters
+
+#Tranformation applied to every channel except width and time
+dataLGCLTransform <- transform(filteredGluData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+
+dataLGCLTransform <- transform(filteredUrData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+
+dataLGCLTransform <- transform(filteredGlnData,'FSC.A' = lgcl(`FSC.A`), 'SSC.A' =lgcl(`SSC.A`), 'FL1.A' = lgcl(`FL1.A`), 'FL2.A' = lgcl(`FL2.A`), 'FL3.A' = lgcl(`FL3.A`), 'FL4.A' = lgcl(`FL4.A`),'FSC.H' = lgcl(`FSC.H`),'SSC.H' = lgcl(`SSC.H`),'FL1.H' = lgcl(`FL1.H`),'FL2.H' = lgcl(`FL2.H`),'FL3.H' = lgcl(`FL3.H`),'FL4.H' = lgcl(`FL4.H`)) 
+
+
+```
+
+##Effect of time
+```{r}
+#The effect of time on signal (of which there shouldn't be any)
+i <- 1
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGluData)[i])
+i <- 2
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGluData)[i])
+i <- 3
+xyplot(FL1.A ~ Time, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(150,250), main = sampleNames(filteredGluData)[i])
+```
+
+##Plots of FL1 versus FSC
+```{r}
+i <- 1
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGluData)[i])
+i <- 2
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGluData)[i])
+i <- 3
+xyplot(FL1.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), sampleNames(filteredGluData)[i])
+```
+
+##Plots of FSC versus SSC
+```{r}
+i <- 1
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGluData)[i])
+i <- 2
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGluData)[i])
+i <- 3
+xyplot(SSC.A ~ FSC.A, data=dataLGCLTransform[i], smooth=F,  stat=T, pos=0.5, abs=T, xlim=c(4,8), ylim=c(4,8), sampleNames(filteredGluData)[i])
+```
+
+##Extract data for further processing
+```{r}
+summary.stats.glu <- as.data.frame(summary.stats.glu)
+PopProportion_zeroGFPglu <- non.gfp.glu/non.debris.glu
+PopProportion_oneGFPglu <- gfp.one.cells.glu/non.debris.glu
+PopProportion_twoGFPglu <- gfp.two.cells.glu/non.debris.glu
+PopProportion_threeGFPglu <- gfp.thr.cells.glu/non.debris.glu
+alldataGLU <- cbind(summary.stats.glu, PopProportion_zeroGFPglu, PopProportion_oneGFPglu, PopProportion_twoGFPglu, PopProportion_threeGFPglu, non.debris.glu)
+colnames(alldataGLU) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+###CHANGE COLUMN NAMES SO THEY ARE ALL THE SAME!!!!!!!
+
+summary.stats.ur <- as.data.frame(summary.stats.ur)
+PopProportion_zeroGFPur <- non.gfp.ur/non.debris.ur
+PopProportion_oneGFPur <- gfp.one.cells.ur/non.debris.ur
+PopProportion_twoGFPur <- gfp.two.cells.ur/non.debris.ur
+PopProportion_threeGFPur <- gfp.thr.cells.ur/non.debris.ur
+alldataur <- cbind(summary.stats.ur, PopProportion_zeroGFPur, PopProportion_oneGFPur, PopProportion_twoGFPur, PopProportion_threeGFPur, non.debris.ur)
+colnames(alldataur) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+
+summary.stats.gln <- as.data.frame(summary.stats.gln)
+PopProportion_zeroGFPgln <- non.gfp.gln/non.debris.gln
+PopProportion_oneGFPgln <- gfp.one.cells.gln/non.debris.gln
+PopProportion_twoGFPgln <- gfp.two.cells.gln/non.debris.gln
+PopProportion_threeGFPgln <- gfp.thr.cells.gln/non.debris.gln
+alldatagln <- cbind(summary.stats.gln, PopProportion_zeroGFPgln, PopProportion_oneGFPgln, PopProportion_twoGFPgln, PopProportion_threeGFPgln, non.debris.gln)
+colnames(alldatagln) <- c("FSC_median","FSC_mean", "FSC_sd","FL1_median", "FL1_mean","FL1_sd","normalizedGFP_median", "normalizedGFP_mean", "normalizedGFP_sd", "PopProp_0copy", "PopProp_1copy", "PopProp_2copy", "PopProp_3plus", "Cells counted")
+
+ALLDATA <- rbind(alldataGLU, alldataur, alldatagln)
+
+#Save the current dataframe
+write.table(ALLDATA, file="DataOut_05252017_MIDTPT.csv", row.names=TRUE, quote=F, sep="\t")
+
+```
+
+
+
+
