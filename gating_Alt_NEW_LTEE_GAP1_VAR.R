@@ -24,12 +24,25 @@
 #source("http://bioconductor.org/biocLite.R")
 #biocLite("flowViz")
 #biocLite("flowCore")
+# CytoRSuite development version on GitHub
+#devtools::install_github("DillonHammill/CytoRSuite", build_vignettes = TRUE)
+
+# CytoRSuiteData development version on GitHub
+#devtools::install_github("DillonHammill/CytoRSuiteData")
+
 
 #Load libraries
 library(flowCore)
 library(flowViz)
+library(flowWorkspace)
+library(openCyto)
 library(ggcyto)
 library(ggforce)
+#library(CytoRSuite)
+devtools::install_github("DillonHammill/CytoRSuite", build_vignettes = TRUE)
+library(CytoRSuiteData)
+
+
 
 
 #Read in the data
@@ -82,6 +95,30 @@ sampleNames(flowData) <- paste(gsub(" ","_",sample.sheet$Strain),"_",sub(" ","_"
 zerocopy <- 1
 onecopy <- 3
 twocopy <- 4
+
+
+# Add flowSet to GatingSet
+gs <- GatingSet(flowData)
+
+# Gate Cells
+gate_draw(gs, 
+          parent = "root",
+          alias = "Cells",
+          channels = c("FSC-A","SSC-A"),
+          type = "polygon",
+          gatingTemplate = "Compensation-gatingTemplate.csv")
+
+# Gate Single Cells
+gate_draw(gs, 
+          parent = "Cells",
+          alias = "Single Cells",
+          channels = c("FSC-A","FSC-H"),
+          type = "polygon",
+          gatingTemplate = "Compensation-gatingTemplate.csv")
+
+
+
+
 
 ##############################
 #1. Generate gate for singlet cells####
