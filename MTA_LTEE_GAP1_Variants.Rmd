@@ -83,11 +83,11 @@ date <- "2019-01-24"
 #style of input
 #Reading Data in
 #Read in and combine individual Proportional Data
-read.prop <- "Yes"
+read.prop <- "No"
 #Read in and combine individual DataFrames 
-read.df <- "Yes"
+read.df <- "No"
 #Read in and combine individual Experiment Statistics
-read.stats <- "Yes"
+read.stats <- "No"
 
 #Appending Data to previous data
 #use the date to identify the combined data file you wish to append a new file to
@@ -105,21 +105,21 @@ append.stats <- "No"
 
 #Saving curent Files
 #Save combined Proportional Data
-save.prop <- "Yes"
+save.prop <- "No"
 #Save combined DataFrame - Individual data points
-save.df <- "Yes"
+save.df <- "No"
 #Save combined Experiment Statistics
-save.stats <- "Yes"
+save.stats <- "No"
 
 #Loading
 #Date of combined data files you wish to load
-load.date <- ""
+load.date <- "2019-02-15"
 #Load combined Proportional Data
-load.prop <- "No"
+load.prop <- "Yes"
 #Load combined DataFrame - Individual data points
-load.df <- "No"
+load.df <- "Yes"
 #Load combined Experiment Statistics
-load.stats <- "No"
+load.stats <- "Yes"
 
 
 #filenames
@@ -240,6 +240,8 @@ if(save.stats=="Yes"){
 #Read in and Combine Proportional Data
 if(load.prop=="Yes"){
   data.prop <- read_csv(paste(path.data,name,"_propAllData_",load.date,".csv",sep=""))
+  data.stats$VESSEL <- as.factor(data.stats$VESSEL)
+
 }
 #Read in and Combine data frames
 if(load.df=="Yes"){
@@ -248,6 +250,8 @@ if(load.df=="Yes"){
 #Read in and Combine Statistical Data
 if(load.stats=="Yes"){
   data.stats <- read_csv(paste(path.data,name,"_statsAllData_",load.date,".csv",sep=""))
+  data.stats$VESSEL <- as.factor(data.stats$VESSEL)
+
 }
 ```
 
@@ -266,7 +270,7 @@ plot.shapes <- c(1:20)
 
 ```{r Signal Over Time}
 
-sig.plot <- ggplot(data.stats, aes(x=TIMEPOINT,y=NORMALIZED_GFP_MEDIAN, colour=VESSEL)) +
+sig.plot <- ggplot(data.stats, aes(x=TIMEPOINT,y=FSC_MEDIAN, colour=VESSEL)) +
   geom_point(aes(shape=GENOTYPE)) +
   geom_line(aes(linetype=POPULATION), size=1.2) +
   scale_shape_manual(values = plot.shapes)+
@@ -282,6 +286,12 @@ sig.plot <- ggplot(data.stats, aes(x=TIMEPOINT,y=NORMALIZED_GFP_MEDIAN, colour=V
   
 #sig.plot %+% subset(data.stats, POPULATION %in% c("Wild Type"))
 sig.plot %+% facet_wrap_paginate(~STRAIN, ncol = 2, nrow = 2, page = 1)
+
+for(i in 1:round(length(table(data.stats$STRAIN))/4,0)){
+  plot <- sig.plot %+% facet_wrap_paginate(~STRAIN, ncol = 2, nrow = 2, page = i)
+  print(plot)
+}
+
 
 ```
 
@@ -306,17 +316,22 @@ pop.plot %+% facet_wrap_paginate(~STRAIN, ncol = 2, nrow = 2, page = 1)
 
 
 ```{r Ridge Plots}
-ridge.plot <- ggplot(data.df, aes(x = FL1.A/FSC.A, y = TIMEPOINT, fill = ..x.., height=..density..)) +
+ridge.plot <- ggplot(data.df, aes(x = FSC.A, y = as.factor(TIMEPOINT), fill = ..x.., height=..density..)) +
   geom_joy_gradient(scale = 1.25, rel_min_height = 0.02) +
-  scale_x_continuous("Normalized Fluorescence", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
-  scale_y_discrete("Generations", expand = c(0.01, 0)) +
+  #scale_x_continuous("Normalized Fluorescence", limits=c(0.05,1.4), expand = c(0.01, 0), breaks = c(0.1, 0.7, 1.2)) +
+  scale_x_continuous("Normalized Fluorescence") +
+  #scale_y_discrete("Generations", expand = c(0.01, 0)) +
+  scale_y_discrete("Generations") +
   scale_fill_distiller(type = "seq", palette = 5, direction = 1, guide = "colourbar") +
   theme_bw() + 
   theme(text=element_text(size=11),legend.position = 'none', legend.title = element_blank(), axis.title.y = element_text(face="bold", size=12), axis.text.y = element_text(size=10), axis.title.x = element_text(face="bold", size=12), axis.text.x = element_text(size=10))
   
   
 #ridge.plot %+% subset(data.df, VESSEL %in% "1")
-ridge.plot %+% facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 2, page = 1)
+for(i in 1:round(length(table(data.stats$VESSEL))/2,0)){
+  plot<- ridge.plot %+% facet_wrap_paginate(~VESSEL, ncol = 2, nrow = 1, page = i)
+  print(plot)
+}
 
 ```
 
